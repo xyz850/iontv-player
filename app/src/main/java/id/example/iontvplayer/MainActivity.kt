@@ -83,7 +83,37 @@ class MainActivity : Activity() {
         buildUi()
 
         // Pulihkan URL playlist yang tersimpan sebelumnya.
-        urlInput.setText(appPrefs.getString("playlist_url", "https://bit.ly/KPL203") ?: "")
+        val savedPlaylistUrl =
+            appPrefs.getString("playlist_url", null)?.trim().orEmpty()
+
+        if (savedPlaylistUrl.isNotBlank()) {
+            urlInput.setText(savedPlaylistUrl)
+        }
+
+        // Muat ulang playlist otomatis jika URL sebelumnya tersimpan.
+        val savedPath = savedPlaylistUrl.substringBefore("?").lowercase()
+        val isSavedPlaylist = savedPath.endsWith(".m3u") ||
+            savedPlaylistUrl.contains("bit.ly/", ignoreCase = true)
+
+        if (savedPlaylistUrl.isNotBlank() && isSavedPlaylist) {
+            val headers = mutableMapOf<String, String>()
+
+            refererInput.text.toString().trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { headers["Referer"] = it }
+
+            originInput.text.toString().trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { headers["Origin"] = it }
+
+            uaInput.text.toString().trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { headers["User-Agent"] = it }
+
+            window.decorView.post {
+                loadPlaylist(savedPlaylistUrl, headers)
+            }
+        }
     }
 
     private fun buildUi() {
