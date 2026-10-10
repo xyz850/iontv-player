@@ -624,6 +624,7 @@ class MainActivity : Activity() {
                     "http-user-agent" -> "User-Agent"
                     "http-referrer", "http-referer" -> "Referer"
                     "http-origin" -> "Origin"
+                    "http-cookie" -> "Cookie"
                     else -> null
                 }
 
