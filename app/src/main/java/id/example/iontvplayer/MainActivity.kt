@@ -55,7 +55,8 @@ class MainActivity : Activity() {
 
     private data class PlaylistEntry(
         val name: String,
-        val url: String
+        val url: String,
+        val headers: Map<String, String> = emptyMap()
     )
 
     private val bg = Color.rgb(16, 17, 20)
@@ -485,7 +486,11 @@ class MainActivity : Activity() {
                 status.text = "Pilih channel terlebih dahulu."
                 return
             }
-            playMedia(selected.url, headers)
+            // Header global menjadi nilai awal.
+            // Metadata header channel mengesampingkan nilai global.
+            val effectiveHeaders = headers.toMutableMap()
+            effectiveHeaders.putAll(selected.headers)
+            playMedia(selected.url, effectiveHeaders)
             return
         }
 
@@ -573,6 +578,7 @@ class MainActivity : Activity() {
 
         val result = mutableListOf<PlaylistEntry>()
         var pendingName: String? = null
+        var pendingHeaders = mutableMapOf<String, String>()
 
         for (line in lines) {
             if (line.startsWith("#EXTINF", ignoreCase = true)) {
@@ -586,6 +592,28 @@ class MainActivity : Activity() {
                 pendingName = tvgName?.takeIf { it.isNotBlank() }
                     ?: title.takeIf { it.isNotBlank() }
                     ?: "Channel ${result.size + 1}"
+
+                pendingHeaders = mutableMapOf()
+            } else if (line.startsWith("#EXTVLCOPT:", ignoreCase = true)
+                && pendingName != null) {
+                val option = line.substringAfter(':')
+                val separator = option.indexOf('=')
+                if (separator <= 0) continue
+
+                val key = option.substring(0, separator)
+                    .trim().lowercase()
+                val value = option.substring(separator + 1).trim()
+
+                val headerName = when (key) {
+                    "http-user-agent" -> "User-Agent"
+                    "http-referrer", "http-referer" -> "Referer"
+                    "http-origin" -> "Origin"
+                    else -> null
+                }
+
+                if (headerName != null && value.isNotEmpty()) {
+                    pendingHeaders[headerName] = value
+                }
             } else if (!line.startsWith("#") && pendingName != null) {
                 try {
                     val resolved = java.net.URL(
@@ -594,12 +622,19 @@ class MainActivity : Activity() {
 
                     if (resolved.startsWith("http://") ||
                         resolved.startsWith("https://")) {
-                        result.add(PlaylistEntry(pendingName!!, resolved))
+                        result.add(
+                            PlaylistEntry(
+                                name = pendingName!!,
+                                url = resolved,
+                                headers = pendingHeaders.toMap()
+                            )
+                        )
                     }
                 } catch (_: Exception) {
-                    // Abaikan URL playlist yang tidak valid.
+                    // Abaikan URL yang tidak valid.
                 }
                 pendingName = null
+                pendingHeaders = mutableMapOf()
             }
         }
 
