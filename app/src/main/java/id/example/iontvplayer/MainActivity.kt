@@ -113,22 +113,6 @@ class MainActivity : Activity() {
             setPadding(dp(16))
         }
 
-        val title = TextView(this).apply {
-            text = "ION TV PLAYER"
-            textSize = 22f
-            setTextColor(accent)
-            setPadding(0, dp(8), 0, dp(4))
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        }
-
-        val subtitle = TextView(this).apply {
-            text = "Pemutar streaming • HLS / M3U8"
-            textSize = 13f
-            setTextColor(muted)
-        }
-        root.addView(title)
-        root.addView(subtitle)
-
         playerView = PlayerView(this).apply {
             useController = true
             setBackgroundColor(Color.BLACK)
@@ -139,7 +123,7 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
             ).apply {
-                topMargin = dp(14)
+                topMargin = dp(0)
                 bottomMargin = dp(12)
             }
         )
