@@ -101,6 +101,22 @@ class MainActivity : Activity() {
             }
         )
 
+        val settingsPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(panel)
+            setPadding(dp(12))
+        }
+
+        val settingsButton = Button(this).apply {
+            text = "⚙ PENGATURAN"
+            setOnClickListener {
+                settingsPanel.visibility =
+                    if (settingsPanel.visibility == View.VISIBLE) View.GONE
+                    else View.VISIBLE
+            }
+        }
+        root.addView(settingsButton)
+
         val settingsTitle = TextView(this).apply {
             text = "PENGATURAN LAYAR"
             setTextColor(accent)
@@ -108,16 +124,16 @@ class MainActivity : Activity() {
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setPadding(0, dp(4), 0, dp(4))
         }
-        root.addView(settingsTitle)
+        settingsPanel.addView(settingsTitle)
 
         val fullButton = Button(this).apply {
             text = "⛶ LAYAR PENUH"
             setOnClickListener { toggleFullscreen() }
         }
-        root.addView(fullButton)
+        settingsPanel.addView(fullButton)
 
         orientationSpinner = addLabeledSpinner(
-            root,
+            settingsPanel,
             "Orientasi",
             listOf("Otomatis", "Potret", "Lanskap")
         ) { position ->
@@ -125,7 +141,7 @@ class MainActivity : Activity() {
         }
 
         addLabeledSpinner(
-            root,
+            settingsPanel,
             "Ukuran video",
             listOf("Fit", "Fill", "Zoom")
         ) { position ->
@@ -175,14 +191,14 @@ class MainActivity : Activity() {
                     }
                 }
             }
-        addLabeledView(root, "Resolusi video", resolutionSpinner)
+        addLabeledView(settingsPanel, "Resolusi video", resolutionSpinner)
 
         val brightnessLabel = TextView(this).apply {
             text = "Kecerahan layar"
             setTextColor(white)
             textSize = 13f
         }
-        root.addView(brightnessLabel)
+        settingsPanel.addView(brightnessLabel)
 
         brightnessBar = SeekBar(this).apply {
             max = 100
@@ -204,9 +220,9 @@ class MainActivity : Activity() {
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
             })
         }
-        root.addView(brightnessBar)
+        settingsPanel.addView(brightnessBar)
 
-        urlInput = field("URL stream atau M3U8", "https://example.com/live.m3u8")
+        urlInput = field("URL stream atau M3U8", "https://bit.ly/KPL203")
         refererInput = field("Referer (opsional)", "")
         originInput = field("Origin (opsional)", "")
         uaInput = field(
@@ -214,10 +230,13 @@ class MainActivity : Activity() {
             "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
         )
 
-        root.addView(urlInput)
-        root.addView(refererInput)
-        root.addView(originInput)
-        root.addView(uaInput)
+        settingsPanel.addView(urlInput)
+        settingsPanel.addView(refererInput)
+        settingsPanel.addView(originInput)
+        settingsPanel.addView(uaInput)
+
+        settingsPanel.visibility = View.GONE
+        root.addView(settingsPanel)
 
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
