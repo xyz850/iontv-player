@@ -737,6 +737,12 @@ class MainActivity : Activity() {
     ) {
         releasePlayer()
 
+        if (::resolutionSpinner.isInitialized) {
+            updatingResolution = true
+            resolutionSpinner.setSelection(0)
+            updatingResolution = false
+        }
+
         try {
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true)
@@ -835,6 +841,7 @@ class MainActivity : Activity() {
 
         videoOptions = options.sortedBy { it.group.getTrackFormat(it.trackIndex).height }
 
+        val previousSelection = resolutionSpinner.selectedItem?.toString()
         updatingResolution = true
         val labels = listOf("Resolusi: otomatis") + videoOptions.map { it.label }
         resolutionSpinner.adapter = ArrayAdapter(
@@ -842,7 +849,10 @@ class MainActivity : Activity() {
             android.R.layout.simple_spinner_dropdown_item,
             labels
         )
-        resolutionSpinner.setSelection(0)
+        val selectedIndex = labels.indexOf(previousSelection).let {
+            if (it >= 0) it else 0
+        }
+        resolutionSpinner.setSelection(selectedIndex)
         updatingResolution = false
 
         if (videoOptions.isEmpty()) {
