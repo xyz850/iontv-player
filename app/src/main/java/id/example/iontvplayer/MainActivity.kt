@@ -519,20 +519,26 @@ class MainActivity : Activity() {
             else -> 5
         }
         channelGrid.columnCount = columns
-        val cardWidth = dp((screenWidthDp / columns) - 24)
+        val cardWidth = dp((screenWidthDp / columns) - 16)
 
         channels.forEachIndexed { index, entry ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(dp(8))
-                setBackgroundColor(panel)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(12).toFloat()
+                    setColor(panel)
+                    setStroke(dp(1), 0xFF343944.toInt())
+                }
+                elevation = dp(2).toFloat()
                 isClickable = true
                 isFocusable = true
             }
 
             val logo = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+                layoutParams = LinearLayout.LayoutParams(dp(56), dp(56))
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 setImageResource(android.R.drawable.ic_menu_gallery)
                 contentDescription = "Logo ${entry.name}"
@@ -568,8 +574,8 @@ class MainActivity : Activity() {
 
             val params = GridLayout.LayoutParams().apply {
                 width = cardWidth.coerceAtLeast(dp(100))
-                height = dp(112)
-                setMargins(dp(4), dp(4), dp(4), dp(4))
+                height = dp(120)
+                setMargins(dp(5), dp(5), dp(5), dp(5))
             }
             channelGrid.addView(card, params)
 
