@@ -509,36 +509,34 @@ class MainActivity : Activity() {
         })
     }
 
+
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
         channelGrid.removeAllViews()
+        channelGrid.columnCount = 1
 
         val screenWidthDp = resources.configuration.screenWidthDp
-        val columns = when {
-            screenWidthDp < 420 -> 2
-            screenWidthDp < 650 -> 3
-            else -> 5
-        }
-        channelGrid.columnCount = columns
-        val cardWidth = dp((screenWidthDp / columns) - 16)
+        val cardWidth = dp((screenWidthDp - 24).coerceAtLeast(240))
 
         channels.forEachIndexed { index, entry ->
             val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(8))
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12), dp(8), dp(12), dp(8))
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(12).toFloat()
+                    cornerRadius = dp(10).toFloat()
                     setColor(panel)
                     setStroke(dp(1), 0xFF343944.toInt())
                 }
-                elevation = dp(2).toFloat()
+                elevation = dp(1).toFloat()
                 isClickable = true
                 isFocusable = true
             }
 
             val logo = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(56), dp(56))
+                layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
+                    marginEnd = dp(12)
+                }
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 setImageResource(android.R.drawable.ic_menu_gallery)
                 contentDescription = "Logo ${entry.name}"
@@ -547,22 +545,46 @@ class MainActivity : Activity() {
 
             val name = TextView(this).apply {
                 text = entry.name
-                textSize = 12f
+                textSize = 14f
                 setTextColor(white)
-                gravity = Gravity.CENTER
+                gravity = Gravity.CENTER_VERTICAL
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                setPadding(0, dp(6), 0, 0)
             }
             card.addView(
                 name,
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
                 )
             )
 
-            // Tekan logo, nama, atau kartu untuk langsung memutar channel.
+            // Status perkiraan dari nama: item VOD tidak diberi label LIVE.
+            val lowerName = entry.name.lowercase()
+            val showLive = listOf(
+                "vod", "movie", "film", "series", "episode",
+                "trailer", "replay", "catch-up", "catchup", "on demand"
+            ).none { lowerName.contains(it) }
+
+            if (showLive) {
+                val liveBadge = TextView(this).apply {
+                    text = "LIVE"
+                    textSize = 10f
+                    setTextColor(Color.WHITE)
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), dp(5), dp(8), dp(5))
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                        cornerRadius = dp(5).toFloat()
+                        setColor(0xFFE53935.toInt())
+                    }
+                    contentDescription = "Perkiraan channel live"
+                }
+                card.addView(liveBadge)
+            }
+
             val playSelectedChannel = {
                 channelSpinner.setSelection(index)
                 playStream()
@@ -573,9 +595,9 @@ class MainActivity : Activity() {
             name.setOnClickListener { playSelectedChannel() }
 
             val params = GridLayout.LayoutParams().apply {
-                width = cardWidth.coerceAtLeast(dp(100))
-                height = dp(120)
-                setMargins(dp(5), dp(5), dp(5), dp(5))
+                width = cardWidth
+                height = dp(64)
+                setMargins(dp(5), dp(4), dp(5), dp(4))
             }
             channelGrid.addView(card, params)
 
@@ -606,7 +628,7 @@ class MainActivity : Activity() {
                             }
                         }
                     } catch (_: Exception) {
-                        // Logo gagal dimuat: pertahankan ikon pengganti.
+                        // Gunakan ikon pengganti jika logo gagal dimuat.
                     } finally {
                         connection?.disconnect()
                     }
