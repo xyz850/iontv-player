@@ -221,7 +221,11 @@ class MainActivity : Activity() {
             contentDescription = "Pengaturan layar dan video"
             textSize = 20f
             setTextColor(accent)
-            setBackgroundColor(panel)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            stateListAnimator = null
+            setPadding(0, 0, 0, 0)
+            minWidth = 0
+            minHeight = 0
             setOnClickListener {
                 settingsPanel.visibility =
                     if (settingsPanel.visibility == View.VISIBLE) View.GONE
