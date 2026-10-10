@@ -288,6 +288,8 @@ class MainActivity : Activity() {
             }
         )
         buttons.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f))
+        // Sembunyikan tombol PUTAR dan STOP.
+        buttons.visibility = View.GONE
         root.addView(buttons)
 
         val channelLabel = TextView(this).apply {
@@ -420,10 +422,15 @@ class MainActivity : Activity() {
                 )
             )
 
-            card.setOnClickListener {
+            // Tekan logo, nama, atau kartu untuk langsung memutar channel.
+            val playSelectedChannel = {
                 channelSpinner.setSelection(index)
-                status.text = "Dipilih: ${entry.name}. Tekan PUTAR untuk memulai."
+                playStream()
             }
+
+            card.setOnClickListener { playSelectedChannel() }
+            logo.setOnClickListener { playSelectedChannel() }
+            name.setOnClickListener { playSelectedChannel() }
 
             val params = GridLayout.LayoutParams().apply {
                 width = cardWidth.coerceAtLeast(dp(100))
