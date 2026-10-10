@@ -1,4 +1,5 @@
 package id.example.iontvplayer
+import android.net.Uri
 
 import android.app.Activity
 import android.os.Bundle
@@ -56,7 +57,10 @@ class MainActivity : Activity() {
     private data class PlaylistEntry(
         val name: String,
         val url: String,
-        val headers: Map<String, String> = emptyMap()
+        val headers: Map<String, String> = emptyMap(),
+        val drmScheme: String? = null,
+        val drmLicenseUrl: String? = null,
+        val drmLicenseHeaders: Map<String, String> = emptyMap()
     )
 
     private val bg = Color.rgb(16, 17, 20)
@@ -490,7 +494,13 @@ class MainActivity : Activity() {
             // Metadata header channel mengesampingkan nilai global.
             val effectiveHeaders = headers.toMutableMap()
             effectiveHeaders.putAll(selected.headers)
-            playMedia(selected.url, effectiveHeaders)
+            playMedia(
+                selected.url,
+                effectiveHeaders,
+                selected.drmScheme,
+                selected.drmLicenseUrl,
+                selected.drmLicenseHeaders
+            )
             return
         }
 
@@ -579,6 +589,9 @@ class MainActivity : Activity() {
         val result = mutableListOf<PlaylistEntry>()
         var pendingName: String? = null
         var pendingHeaders = mutableMapOf<String, String>()
+        var pendingDrmScheme: String? = null
+        var pendingLicenseUrl: String? = null
+        var pendingLicenseHeaders = mutableMapOf<String, String>()
 
         for (line in lines) {
             if (line.startsWith("#EXTINF", ignoreCase = true)) {
@@ -594,6 +607,9 @@ class MainActivity : Activity() {
                     ?: "Channel ${result.size + 1}"
 
                 pendingHeaders = mutableMapOf()
+                pendingDrmScheme = null
+                pendingLicenseUrl = null
+                pendingLicenseHeaders = mutableMapOf()
             } else if (line.startsWith("#EXTVLCOPT:", ignoreCase = true)
                 && pendingName != null) {
                 val option = line.substringAfter(':')
@@ -614,6 +630,70 @@ class MainActivity : Activity() {
                 if (headerName != null && value.isNotEmpty()) {
                     pendingHeaders[headerName] = value
                 }
+            } else if (line.startsWith("#KODIPROP:", ignoreCase = true)
+                && pendingName != null) {
+                val property = line.substringAfter(':')
+                val separator = property.indexOf('=')
+                if (separator > 0) {
+                    val key = property.substring(0, separator)
+                        .trim().lowercase()
+                    val value = property.substring(separator + 1).trim()
+
+                    when (key) {
+                        "inputstream.adaptive.license_type" -> {
+                            pendingDrmScheme =
+                                if (value.equals("com.widevine.alpha", true) ||
+                                    value.equals("widevine", true)) {
+                                    "widevine"
+                                } else {
+                                    null
+                                }
+                        }
+
+                        "inputstream.adaptive.license_key" -> {
+                            val parts = value.split('|')
+                            val rawLicenseUrl =
+                                parts.firstOrNull()?.trim().orEmpty()
+
+                            if (rawLicenseUrl.isNotEmpty()) {
+                                try {
+                                    pendingLicenseUrl = java.net.URL(
+                                        java.net.URL(baseUrl),
+                                        rawLicenseUrl
+                                    ).toString()
+                                } catch (_: Exception) {
+                                    pendingLicenseUrl = rawLicenseUrl
+                                }
+                            }
+
+                            pendingLicenseHeaders = mutableMapOf()
+                            val headerText = parts.getOrNull(1).orEmpty()
+
+                            for (header in headerText.split('&')) {
+                                val eq = header.indexOf('=')
+                                if (eq <= 0) continue
+
+                                val headerName = header.substring(0, eq).trim()
+                                val encodedValue = header.substring(eq + 1).trim()
+
+                                if (headerName.isNotEmpty()) {
+                                    val decodedValue = try {
+                                        java.net.URLDecoder.decode(
+                                            encodedValue,
+                                            "UTF-8"
+                                        )
+                                    } catch (_: Exception) {
+                                        encodedValue
+                                    }
+                                    if (decodedValue.isNotEmpty()) {
+                                        pendingLicenseHeaders[headerName] =
+                                            decodedValue
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } else if (!line.startsWith("#") && pendingName != null) {
                 try {
                     val resolved = java.net.URL(
@@ -626,7 +706,10 @@ class MainActivity : Activity() {
                             PlaylistEntry(
                                 name = pendingName!!,
                                 url = resolved,
-                                headers = pendingHeaders.toMap()
+                                headers = pendingHeaders.toMap(),
+                                drmScheme = pendingDrmScheme,
+                                drmLicenseUrl = pendingLicenseUrl,
+                                drmLicenseHeaders = pendingLicenseHeaders.toMap()
                             )
                         )
                     }
@@ -635,13 +718,22 @@ class MainActivity : Activity() {
                 }
                 pendingName = null
                 pendingHeaders = mutableMapOf()
+                pendingDrmScheme = null
+                pendingLicenseUrl = null
+                pendingLicenseHeaders = mutableMapOf()
             }
         }
 
         return result
     }
 
-    private fun playMedia(url: String, headers: Map<String, String>) {
+    private fun playMedia(
+        url: String,
+        headers: Map<String, String>,
+        drmScheme: String? = null,
+        drmLicenseUrl: String? = null,
+        drmLicenseHeaders: Map<String, String> = emptyMap()
+    ) {
         releasePlayer()
 
         try {
@@ -665,6 +757,28 @@ class MainActivity : Activity() {
                             itemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
                         cleanUrl.endsWith(".mpd", true) ->
                             itemBuilder.setMimeType(MimeTypes.APPLICATION_MPD)
+                    }
+
+                    if (drmScheme == "widevine") {
+                        val license = drmLicenseUrl
+                        if (license.isNullOrBlank()) {
+                            throw IllegalArgumentException(
+                                "Channel Widevine tidak memiliki URL lisensi."
+                            )
+                        }
+                        if (!license.startsWith("https://", ignoreCase = true)) {
+                            throw IllegalArgumentException(
+                                "URL lisensi Widevine harus menggunakan HTTPS."
+                            )
+                        }
+
+                        val drmConfiguration =
+                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                                .setLicenseUri(Uri.parse(license))
+                                .setLicenseRequestHeaders(drmLicenseHeaders)
+                                .build()
+
+                        itemBuilder.setDrmConfiguration(drmConfiguration)
                     }
 
                     exo.setMediaItem(itemBuilder.build())
