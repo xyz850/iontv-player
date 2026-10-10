@@ -214,7 +214,7 @@ class MainActivity : Activity() {
         }
 
         val settingsButton = Button(this).apply {
-            text = "⚙ PENGATURAN"
+            text = "⚙ PENGATURAN PLAYER & SUMBER"
             setOnClickListener {
                 settingsPanel.visibility =
                     if (settingsPanel.visibility == View.VISIBLE) View.GONE
@@ -224,7 +224,7 @@ class MainActivity : Activity() {
         root.addView(settingsButton)
 
         val settingsTitle = TextView(this).apply {
-            text = "PENGATURAN LAYAR"
+            text = "PENGATURAN PLAYER & SUMBER"
             setTextColor(accent)
             textSize = 14f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -342,14 +342,8 @@ class MainActivity : Activity() {
         settingsPanel.addView(originInput)
         settingsPanel.addView(uaInput)
 
-        // Sembunyikan input playlist dan header jaringan dari panel.
-        urlInput.visibility = View.GONE
-        refererInput.visibility = View.GONE
-        originInput.visibility = View.GONE
-        uaInput.visibility = View.GONE
-
+        // Panel pengaturan ditampilkan saat tombol ditekan.
         settingsPanel.visibility = View.GONE
-        root.addView(settingsPanel)
 
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -378,13 +372,16 @@ class MainActivity : Activity() {
             }
         )
         buttons.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f))
-        // Sembunyikan tombol PUTAR dan STOP.
-        buttons.visibility = View.GONE
-        root.addView(buttons)
+        settingsPanel.addView(buttons)
 
         val channelContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
+
+        // Satukan pengaturan, tombol player, dan channel
+        // di dalam area scroll yang sama.
+        channelContent.addView(settingsPanel)
+        channelContent.addView(buttons)
 
         val channelLabel = TextView(this).apply {
             text = "DAFTAR CHANNEL"
@@ -445,7 +442,6 @@ class MainActivity : Activity() {
         }
         channelContent.addView(hint)
 
-        // Sembunyikan daftar channel dari tampilan utama.
         channelContent.visibility = View.VISIBLE
 
         scroll = ScrollView(this).apply {
