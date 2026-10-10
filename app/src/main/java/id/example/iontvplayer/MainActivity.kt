@@ -131,7 +131,7 @@ class MainActivity : Activity() {
             setTextColor(white)
             setHintTextColor(muted)
             textSize = 13f
-            singleLine = true
+            setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             setPadding(dp(12))
             backgroundTintList = android.content.res.ColorStateList.valueOf(accent)
