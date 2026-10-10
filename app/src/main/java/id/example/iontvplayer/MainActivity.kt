@@ -426,7 +426,7 @@ class MainActivity : Activity() {
         channelContent.addView(hint)
 
         // Sembunyikan daftar channel dari tampilan utama.
-        channelContent.visibility = View.GONE
+        channelContent.visibility = View.VISIBLE
 
         scroll = ScrollView(this).apply {
             isFillViewport = true
