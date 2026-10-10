@@ -381,7 +381,6 @@ class MainActivity : Activity() {
         // Satukan pengaturan, tombol player, dan channel
         // di dalam area scroll yang sama.
         channelContent.addView(settingsPanel)
-        channelContent.addView(buttons)
 
         val channelLabel = TextView(this).apply {
             text = "DAFTAR CHANNEL"
