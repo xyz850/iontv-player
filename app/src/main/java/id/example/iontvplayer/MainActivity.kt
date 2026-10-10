@@ -82,36 +82,15 @@ class MainActivity : Activity() {
         window.navigationBarColor = bg
         buildUi()
 
-        // Pulihkan URL playlist yang tersimpan sebelumnya.
+        // Pulihkan URL dan mulai memuat konten secara otomatis.
         val savedPlaylistUrl =
             appPrefs.getString("playlist_url", null)?.trim().orEmpty()
 
         if (savedPlaylistUrl.isNotBlank()) {
             urlInput.setText(savedPlaylistUrl)
-        }
-
-        // Muat ulang playlist otomatis jika URL sebelumnya tersimpan.
-        val savedPath = savedPlaylistUrl.substringBefore("?").lowercase()
-        val isSavedPlaylist = savedPath.endsWith(".m3u") ||
-            savedPlaylistUrl.contains("bit.ly/", ignoreCase = true)
-
-        if (savedPlaylistUrl.isNotBlank() && isSavedPlaylist) {
-            val headers = mutableMapOf<String, String>()
-
-            refererInput.text.toString().trim()
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers["Referer"] = it }
-
-            originInput.text.toString().trim()
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers["Origin"] = it }
-
-            uaInput.text.toString().trim()
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers["User-Agent"] = it }
 
             window.decorView.post {
-                loadPlaylist(savedPlaylistUrl, headers)
+                playStream()
             }
         }
     }
@@ -799,7 +778,7 @@ class MainActivity : Activity() {
                         )
                         channelSpinner.setSelection(0)
                         status.text =
-                            "Playlist dimuat: ${channels.size} channel. Pilih channel, lalu tekan PUTAR."
+                            "Playlist dimuat: ${channels.size} channel. Ketuk channel untuk memutar."
                     }
                 }
             } catch (e: Exception) {
