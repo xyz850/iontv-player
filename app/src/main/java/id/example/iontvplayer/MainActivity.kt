@@ -685,13 +685,70 @@ class MainActivity : Activity() {
 
         val path = url.substringBefore("?").lowercase()
         val looksLikePlaylist = path.endsWith(".m3u") ||
+            path.endsWith(".m3u8") ||
             url.contains("bit.ly/", ignoreCase = true)
 
         if (looksLikePlaylist) {
             loadPlaylist(url, headers)
         } else {
-            playMedia(url, headers)
+            detectPlaylistOrPlayMedia(url, headers)
         }
+    }
+
+    private fun detectPlaylistOrPlayMedia(
+        url: String,
+        headers: Map<String, String>
+    ) {
+        status.text = "Memeriksa jenis stream…"
+
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                connection =
+                    (java.net.URL(url).openConnection()
+                        as java.net.HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 10000
+                        readTimeout = 10000
+                        requestMethod = "GET"
+                        setRequestProperty("Accept", "*/*")
+                        headers.forEach { (name, value) ->
+                            setRequestProperty(name, value)
+                        }
+                    }
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("HTTP $code")
+                }
+
+                val prefix = connection.inputStream.use { input ->
+                    val buffer = ByteArray(8192)
+                    val count = input.read(buffer)
+                    if (count <= 0) "" else
+                        String(buffer, 0, count, Charsets.UTF_8)
+                }
+
+                val isPlaylist =
+                    prefix.contains("#EXTM3U", ignoreCase = true) ||
+                    connection.contentType
+                        ?.contains("mpegurl", ignoreCase = true) == true
+
+                runOnUiThread {
+                    if (isPlaylist) {
+                        loadPlaylist(url, headers)
+                    } else {
+                        playMedia(url, headers)
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    playMedia(url, headers)
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
     }
 
     private fun loadPlaylist(url: String, headers: Map<String, String>) {
