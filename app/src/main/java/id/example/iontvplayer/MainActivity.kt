@@ -34,6 +34,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var root: LinearLayout
     private lateinit var scroll: ScrollView
+    private lateinit var fullscreenContainer: FrameLayout
     private lateinit var resolutionSpinner: Spinner
     private lateinit var orientationSpinner: Spinner
     private lateinit var brightnessBar: SeekBar
@@ -328,44 +329,63 @@ class MainActivity : Activity() {
     }
 
     private fun toggleFullscreen() {
-        fullscreen = !fullscreen
-
-        if (fullscreen) {
+        if (!fullscreen) {
+            fullscreen = true
             previousScreenBrightness = window.attributes.screenBrightness
+
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
-            for (i in 0 until root.childCount) {
-                val child = root.getChildAt(i)
-                if (child !== playerView) child.visibility = View.GONE
+            val parent = playerView.parent as? ViewGroup
+            parent?.removeView(playerView)
+
+            fullscreenContainer = FrameLayout(this).apply {
+                setBackgroundColor(Color.BLACK)
+                addView(
+                    playerView,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        Gravity.CENTER
+                    )
+                )
             }
 
-            root.setPadding(0)
-            root.minimumHeight = resources.displayMetrics.heightPixels
-            playerView.layoutParams = playerView.layoutParams.apply {
-                height = ViewGroup.LayoutParams.MATCH_PARENT
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-            }
+            (window.decorView as ViewGroup).addView(
+                fullscreenContainer,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
 
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         } else {
-            for (i in 0 until root.childCount) {
-                root.getChildAt(i).visibility = View.VISIBLE
-            }
+            fullscreen = false
 
-            root.setPadding(dp(16))
-            root.minimumHeight = 0
-            playerView.layoutParams = playerView.layoutParams.apply {
-                height = dp(220)
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-            }
+            (fullscreenContainer.parent as? ViewGroup)
+                ?.removeView(fullscreenContainer)
+
+            fullscreenContainer.removeView(playerView)
+
+            root.addView(
+                playerView,
+                2,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(220)
+                ).apply {
+                    topMargin = dp(14)
+                    bottomMargin = dp(12)
+                }
+            )
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+            root.setPadding(dp(16))
             applyOrientation(orientationSpinner.selectedItemPosition)
         }
-        scroll.requestLayout()
     }
 
     private fun field(label: String, value: String): EditText {
