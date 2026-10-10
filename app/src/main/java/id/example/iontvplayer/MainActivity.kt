@@ -312,13 +312,17 @@ class MainActivity : Activity() {
         buttons.visibility = View.GONE
         root.addView(buttons)
 
+        val channelContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
         val channelLabel = TextView(this).apply {
             text = "DAFTAR CHANNEL"
             textSize = 13f
             setTextColor(accent)
             setPadding(0, dp(10), 0, dp(3))
         }
-        root.addView(channelLabel)
+        channelContent.addView(channelLabel)
 
         channelSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
@@ -327,7 +331,7 @@ class MainActivity : Activity() {
                 listOf("Playlist belum dimuat")
             )
         }
-        root.addView(
+        channelContent.addView(
             channelSpinner,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -347,7 +351,7 @@ class MainActivity : Activity() {
             alignmentMode = GridLayout.ALIGN_MARGINS
             useDefaultMargins = false
         }
-        root.addView(
+        channelContent.addView(
             channelGrid,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -361,7 +365,7 @@ class MainActivity : Activity() {
             setTextColor(muted)
             setPadding(0, dp(10), 0, dp(4))
         }
-        root.addView(status)
+        channelContent.addView(status)
 
         val hint = TextView(this).apply {
             text = "Resolusi bergantung pada stream. DRM memerlukan konfigurasi dan lisensi dari penyedia."
@@ -369,13 +373,21 @@ class MainActivity : Activity() {
             setTextColor(muted)
             setPadding(0, dp(6), 0, 0)
         }
-        root.addView(hint)
+        channelContent.addView(hint)
 
         scroll = ScrollView(this).apply {
             isFillViewport = true
-            addView(root)
+            addView(channelContent)
         }
-        setContentView(scroll)
+        root.addView(
+            scroll,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        )
+        setContentView(root)
 
         // Simpan URL setiap kali pengguna mengubah kolom playlist.
         urlInput.addTextChangedListener(object : android.text.TextWatcher {
