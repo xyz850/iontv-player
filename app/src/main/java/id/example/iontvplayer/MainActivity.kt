@@ -264,7 +264,7 @@ class MainActivity : Activity() {
         root.addView(hint)
 
         scroll = ScrollView(this).apply {
-            fillViewport = true
+            isFillViewport = true
             addView(root)
         }
         setContentView(scroll)
