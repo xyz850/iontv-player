@@ -45,6 +45,10 @@ class MainActivity : Activity() {
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
 
+    private val appPrefs by lazy {
+        getSharedPreferences("iontv_settings", MODE_PRIVATE)
+    }
+
     private var fullscreen = false
     private var videoOptions: List<VideoOption> = emptyList()
     private var updatingResolution = false
@@ -77,6 +81,9 @@ class MainActivity : Activity() {
         window.statusBarColor = bg
         window.navigationBarColor = bg
         buildUi()
+
+        // Pulihkan URL playlist yang tersimpan sebelumnya.
+        urlInput.setText(appPrefs.getString("playlist_url", "https://bit.ly/KPL203") ?: "")
     }
 
     private fun buildUi() {
@@ -347,6 +354,23 @@ class MainActivity : Activity() {
             addView(root)
         }
         setContentView(scroll)
+
+        // Simpan URL setiap kali pengguna mengubah kolom playlist.
+        urlInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?, start: Int, count: Int, after: Int
+            ) {}
+
+            override fun onTextChanged(
+                s: CharSequence?, start: Int, before: Int, count: Int
+            ) {
+                appPrefs.edit()
+                    .putString("playlist_url", s?.toString().orEmpty())
+                    .apply()
+            }
+
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
     }
 
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
