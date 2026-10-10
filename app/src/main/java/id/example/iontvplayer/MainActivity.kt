@@ -241,7 +241,7 @@ class MainActivity : Activity() {
         )
 
         val settingsTitle = TextView(this).apply {
-            text = "PENGATURAN LAYAR & VIDEO"
+            text = "PENGATURAN LAYAR"
             setTextColor(accent)
             textSize = 14f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -254,6 +254,13 @@ class MainActivity : Activity() {
             setOnClickListener { toggleFullscreen() }
         }
         settingsPanel.addView(fullButton)
+
+        val exitButton = Button(this).apply {
+            text = "EXIT"
+            contentDescription = "Keluar dari aplikasi"
+            setOnClickListener { finish() }
+        }
+        settingsPanel.addView(exitButton)
 
         orientationSpinner = addLabeledSpinner(
             settingsPanel,
@@ -356,24 +363,10 @@ class MainActivity : Activity() {
         val sourcePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(4), 0, dp(4))
-            visibility = View.GONE
+            visibility = View.VISIBLE
         }
 
-        val sourceToggle = Button(this).apply {
-            text = "▸ SUMBER & PLAYLIST"
-            setOnClickListener {
-                val showSource = sourcePanel.visibility != View.VISIBLE
-                sourcePanel.visibility =
-                    if (showSource) View.VISIBLE else View.GONE
-                text = if (showSource) {
-                    "▾ SUMBER & PLAYLIST"
-                } else {
-                    "▸ SUMBER & PLAYLIST"
-                }
-            }
-        }
-
-        settingsPanel.addView(sourceToggle)
+        // Sumber dan playlist tetap tersedia tanpa tombol lipat.
         settingsPanel.addView(sourcePanel)
 
         val sourceHint = TextView(this).apply {
@@ -803,6 +796,23 @@ class MainActivity : Activity() {
                     )
                 )
             }
+
+            val exitFullscreenButton = Button(this).apply {
+                text = "✕"
+                contentDescription = "Keluar dari layar penuh"
+                textSize = 22f
+                setTextColor(Color.WHITE)
+                setBackgroundColor(Color.TRANSPARENT)
+                stateListAnimator = null
+                setOnClickListener { toggleFullscreen() }
+            }
+
+            fullscreenContainer.addView(
+                exitFullscreenButton,
+                FrameLayout.LayoutParams(
+                    dp(52), dp(52), Gravity.TOP or Gravity.END
+                )
+            )
 
             (window.decorView as ViewGroup).addView(
                 fullscreenContainer,
