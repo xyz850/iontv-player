@@ -159,8 +159,28 @@ class MainActivity : Activity() {
                 .apply()
 
             urlInput.post {
-                status.text = "Memulihkan playlist tersimpan…"
-                playStream()
+                refererInput.setText(appPrefs.getString("referer", "") ?: "")
+                originInput.setText(appPrefs.getString("origin", "") ?: "")
+                uaInput.setText(
+                    appPrefs.getString(
+                        "user_agent",
+                        "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
+                    ) ?: ""
+                )
+
+                status.text = "Memuat daftar channel tersimpan…"
+                val headers = mutableMapOf<String, String>()
+                refererInput.text.toString().trim()
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { headers["Referer"] = it }
+                originInput.text.toString().trim()
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { headers["Origin"] = it }
+                uaInput.text.toString().trim()
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { headers["User-Agent"] = it }
+
+                loadPlaylist(savedPlaylistUrl, headers)
             }
         }
     }
@@ -443,6 +463,32 @@ class MainActivity : Activity() {
         setContentView(root)
 
         // Simpan URL setiap kali pengguna mengubah kolom playlist.
+        // Simpan header jaringan setiap kali nilainya berubah.
+        fun watchAndSaveHeader(
+            input: EditText,
+            preferenceKey: String
+        ) {
+            input.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?, start: Int, count: Int, after: Int
+                ) {}
+
+                override fun onTextChanged(
+                    s: CharSequence?, start: Int, before: Int, count: Int
+                ) {
+                    appPrefs.edit()
+                        .putString(preferenceKey, s?.toString().orEmpty())
+                        .apply()
+                }
+
+                override fun afterTextChanged(s: android.text.Editable?) {}
+            })
+        }
+
+        watchAndSaveHeader(refererInput, "referer")
+        watchAndSaveHeader(originInput, "origin")
+        watchAndSaveHeader(uaInput, "user_agent")
+
         urlInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(
                 s: CharSequence?, start: Int, count: Int, after: Int
@@ -453,6 +499,9 @@ class MainActivity : Activity() {
             ) {
                 appPrefs.edit()
                     .putString("playlist_url", s?.toString().orEmpty())
+                    .putString("referer", refererInput.text.toString())
+                    .putString("origin", originInput.text.toString())
+                    .putString("user_agent", uaInput.text.toString())
                     .apply()
             }
 
