@@ -80,8 +80,68 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = bg
         window.navigationBarColor = bg
-        buildUi()
 
+        showSplash()
+
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            buildUi()
+            restoreSavedPlaylist()
+        }, 1400)
+    }
+
+    private fun showSplash() {
+        val splash = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(bg)
+            setPadding(dp(24))
+        }
+
+        val logo = TextView(this).apply {
+            text = "▶"
+            textSize = 58f
+            gravity = Gravity.CENTER
+            setTextColor(accent)
+        }
+        splash.addView(
+            logo,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val title = TextView(this).apply {
+            text = "ION TV PLAYER"
+            textSize = 23f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(0, dp(8), 0, dp(10))
+        }
+        splash.addView(title)
+
+        val message = TextView(this).apply {
+            text = "Menyiapkan pemutar..."
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(muted)
+            setPadding(0, 0, 0, dp(20))
+        }
+        splash.addView(message)
+
+        val progress = ProgressBar(this).apply {
+            isIndeterminate = true
+        }
+        splash.addView(
+            progress,
+            LinearLayout.LayoutParams(dp(48), dp(48))
+        )
+
+        setContentView(splash)
+    }
+
+    private fun restoreSavedPlaylist() {
         // Pulihkan URL tersimpan; gunakan nilai bawaan kolom jika belum ada.
         val savedPlaylistUrl =
             appPrefs.getString("playlist_url", null)
@@ -94,7 +154,6 @@ class MainActivity : Activity() {
                 urlInput.setText(savedPlaylistUrl)
             }
 
-            // Simpan URL yang dipakai agar tersedia pada pembukaan berikutnya.
             appPrefs.edit()
                 .putString("playlist_url", savedPlaylistUrl)
                 .apply()
