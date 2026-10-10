@@ -4,6 +4,7 @@ import android.net.Uri
 import android.app.Activity
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.BitmapFactory
 import android.content.pm.ActivityInfo
 import android.view.View
 import android.view.ViewGroup
@@ -40,6 +41,7 @@ class MainActivity : Activity() {
     private lateinit var orientationSpinner: Spinner
     private lateinit var brightnessBar: SeekBar
     private lateinit var channelSpinner: Spinner
+    private lateinit var channelGrid: GridLayout
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
 
@@ -57,6 +59,7 @@ class MainActivity : Activity() {
     private data class PlaylistEntry(
         val name: String,
         val url: String,
+        val logoUrl: String? = null,
         val headers: Map<String, String> = emptyMap(),
         val drmScheme: String? = null,
         val drmLicenseUrl: String? = null,
@@ -303,6 +306,26 @@ class MainActivity : Activity() {
             )
         )
 
+        val screenWidthDp = resources.configuration.screenWidthDp
+        val columns = when {
+            screenWidthDp < 420 -> 2
+            screenWidthDp < 650 -> 3
+            else -> 5
+        }
+
+        channelGrid = GridLayout(this).apply {
+            columnCount = columns
+            alignmentMode = GridLayout.ALIGN_MARGINS
+            useDefaultMargins = false
+        }
+        root.addView(
+            channelGrid,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         status = TextView(this).apply {
             text = "Masukkan URL stream yang kamu punya atau berhak akses."
             textSize = 12f
@@ -324,6 +347,101 @@ class MainActivity : Activity() {
             addView(root)
         }
         setContentView(scroll)
+    }
+
+    private fun renderChannelGrid(channels: List<PlaylistEntry>) {
+        channelGrid.removeAllViews()
+
+        val screenWidthDp = resources.configuration.screenWidthDp
+        val columns = when {
+            screenWidthDp < 420 -> 2
+            screenWidthDp < 650 -> 3
+            else -> 5
+        }
+        channelGrid.columnCount = columns
+        val cardWidth = dp((screenWidthDp / columns) - 24)
+
+        channels.forEachIndexed { index, entry ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(8))
+                setBackgroundColor(panel)
+                isClickable = true
+                isFocusable = true
+            }
+
+            val logo = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setImageResource(android.R.drawable.ic_menu_gallery)
+                contentDescription = "Logo ${entry.name}"
+            }
+            card.addView(logo)
+
+            val name = TextView(this).apply {
+                text = entry.name
+                textSize = 12f
+                setTextColor(white)
+                gravity = Gravity.CENTER
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(0, dp(6), 0, 0)
+            }
+            card.addView(
+                name,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+
+            card.setOnClickListener {
+                channelSpinner.setSelection(index)
+                status.text = "Dipilih: ${entry.name}. Tekan PUTAR untuk memulai."
+            }
+
+            val params = GridLayout.LayoutParams().apply {
+                width = cardWidth.coerceAtLeast(dp(100))
+                height = dp(112)
+                setMargins(dp(4), dp(4), dp(4), dp(4))
+            }
+            channelGrid.addView(card, params)
+
+            val logoUrl = entry.logoUrl
+            if (!logoUrl.isNullOrBlank()) {
+                Thread {
+                    var connection: java.net.HttpURLConnection? = null
+                    try {
+                        connection = java.net.URL(logoUrl).openConnection()
+                            as java.net.HttpURLConnection
+                        connection.connectTimeout = 8000
+                        connection.readTimeout = 8000
+                        connection.instanceFollowRedirects = true
+                        connection.setRequestProperty(
+                            "User-Agent",
+                            "Mozilla/5.0 (Android) IONTVPlayer"
+                        )
+
+                        val bitmap = connection.inputStream.use {
+                            BitmapFactory.decodeStream(it)
+                        }
+
+                        if (bitmap != null) {
+                            runOnUiThread {
+                                if (!isFinishing && logo.parent != null) {
+                                    logo.setImageBitmap(bitmap)
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                        // Logo gagal dimuat: pertahankan ikon pengganti.
+                    } finally {
+                        connection?.disconnect()
+                    }
+                }.start()
+            }
+        }
     }
 
     private fun addLabeledSpinner(
@@ -555,6 +673,7 @@ class MainActivity : Activity() {
                     } else {
                         loadedPlaylistUrl = url
                         playlistChannels = channels
+                        renderChannelGrid(channels)
                         channelSpinner.adapter = ArrayAdapter(
                             this,
                             android.R.layout.simple_spinner_dropdown_item,
@@ -588,6 +707,7 @@ class MainActivity : Activity() {
 
         val result = mutableListOf<PlaylistEntry>()
         var pendingName: String? = null
+        var pendingLogoUrl: String? = null
         var pendingHeaders = mutableMapOf<String, String>()
         var pendingDrmScheme: String? = null
         var pendingLicenseUrl: String? = null
@@ -605,6 +725,10 @@ class MainActivity : Activity() {
                 pendingName = tvgName?.takeIf { it.isNotBlank() }
                     ?: title.takeIf { it.isNotBlank() }
                     ?: "Channel ${result.size + 1}"
+
+                pendingLogoUrl = Regex("""tvg-logo="([^"]+)"""")
+                    .find(line)?.groupValues?.getOrNull(1)
+                    ?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
 
                 pendingHeaders = mutableMapOf()
                 pendingDrmScheme = null
@@ -707,6 +831,7 @@ class MainActivity : Activity() {
                             PlaylistEntry(
                                 name = pendingName!!,
                                 url = resolved,
+                                logoUrl = pendingLogoUrl,
                                 headers = pendingHeaders.toMap(),
                                 drmScheme = pendingDrmScheme,
                                 drmLicenseUrl = pendingLicenseUrl,
