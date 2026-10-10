@@ -197,16 +197,6 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.BLACK)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
-        root.addView(
-            playerView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
-            ).apply {
-                topMargin = dp(0)
-                bottomMargin = dp(12)
-            }
-        )
-
         val settingsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(panel)
@@ -476,12 +466,52 @@ class MainActivity : Activity() {
             isFillViewport = true
             addView(channelContent)
         }
+        val landscapeLayout =
+            resources.configuration.orientation ==
+                android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+        val mainContent = LinearLayout(this).apply {
+            orientation = if (landscapeLayout) {
+                LinearLayout.HORIZONTAL
+            } else {
+                LinearLayout.VERTICAL
+            }
+        }
+
+        if (landscapeLayout) {
+            // Panel channel di kiri, video di kanan.
+            mainContent.addView(
+                scroll,
+                LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0.42f)
+            )
+            mainContent.addView(
+                playerView,
+                LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0.58f)
+            )
+        } else {
+            // Pada mode potret, video di atas.
+            mainContent.addView(
+                playerView,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
+                ).apply {
+                    bottomMargin = dp(8)
+                }
+            )
+            mainContent.addView(
+                scroll,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+                )
+            )
+        }
+
         root.addView(
-            scroll,
+            mainContent,
             LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
             )
         )
         setContentView(root)
@@ -539,7 +569,14 @@ class MainActivity : Activity() {
         channelGrid.columnCount = 1
 
         val screenWidthDp = resources.configuration.screenWidthDp
-        val cardWidth = dp((screenWidthDp - 24).coerceAtLeast(240))
+        val landscapeLayout =
+            resources.configuration.orientation ==
+                android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val cardWidth = if (landscapeLayout) {
+            dp((screenWidthDp * 0.42f - 28).toInt().coerceAtLeast(220))
+        } else {
+            dp((screenWidthDp - 24).coerceAtLeast(240))
+        }
 
         channels.forEachIndexed { index, entry ->
             val card = LinearLayout(this).apply {
