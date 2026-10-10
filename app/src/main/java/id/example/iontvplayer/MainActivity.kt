@@ -316,10 +316,17 @@ class MainActivity : Activity() {
             "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
         )
 
+        // Field tetap dilampirkan agar pemulihan playlist otomatis berfungsi.
         settingsPanel.addView(urlInput)
         settingsPanel.addView(refererInput)
         settingsPanel.addView(originInput)
         settingsPanel.addView(uaInput)
+
+        // Sembunyikan input playlist dan header jaringan dari panel.
+        urlInput.visibility = View.GONE
+        refererInput.visibility = View.GONE
+        originInput.visibility = View.GONE
+        uaInput.visibility = View.GONE
 
         settingsPanel.visibility = View.GONE
         root.addView(settingsPanel)
@@ -417,6 +424,9 @@ class MainActivity : Activity() {
             setPadding(0, dp(6), 0, 0)
         }
         channelContent.addView(hint)
+
+        // Sembunyikan daftar channel dari tampilan utama.
+        channelContent.visibility = View.GONE
 
         scroll = ScrollView(this).apply {
             isFillViewport = true
