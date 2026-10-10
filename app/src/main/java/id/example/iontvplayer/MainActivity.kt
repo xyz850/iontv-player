@@ -89,7 +89,8 @@ class MainActivity : Activity() {
         if (savedPlaylistUrl.isNotBlank()) {
             urlInput.setText(savedPlaylistUrl)
 
-            window.decorView.post {
+            urlInput.post {
+                status.text = "Memulihkan playlist tersimpan…"
                 playStream()
             }
         }
