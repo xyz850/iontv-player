@@ -197,21 +197,43 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.BLACK)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
+        val videoContainer = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            addView(
+                playerView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        }
+
         val settingsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(panel)
             setPadding(dp(12))
         }
 
-        val settingsButton = Button(this).apply {
-            text = "⚙ PENGATURAN LAYAR & VIDEO"
+        // Tombol pengaturan dipindahkan ke kontrol di area video.
+        val videoSettingsButton = Button(this).apply {
+            text = "⚙"
+            contentDescription = "Pengaturan layar dan video"
+            textSize = 20f
+            setTextColor(accent)
+            setBackgroundColor(panel)
             setOnClickListener {
                 settingsPanel.visibility =
                     if (settingsPanel.visibility == View.VISIBLE) View.GONE
                     else View.VISIBLE
             }
         }
-        root.addView(settingsButton)
+
+        videoContainer.addView(
+            videoSettingsButton,
+            FrameLayout.LayoutParams(
+                dp(52), dp(48), Gravity.BOTTOM or Gravity.END
+            )
+        )
 
         val settingsTitle = TextView(this).apply {
             text = "PENGATURAN LAYAR & VIDEO"
@@ -486,14 +508,14 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT, 0.42f)
             )
             mainContent.addView(
-                playerView,
+                videoContainer,
                 LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.MATCH_PARENT, 0.58f)
             )
         } else {
             // Pada mode potret, video di atas.
             mainContent.addView(
-                playerView,
+                videoContainer,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
                 ).apply {
@@ -762,13 +784,13 @@ class MainActivity : Activity() {
 
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
-            val parent = playerView.parent as? ViewGroup
-            parent?.removeView(playerView)
+            val parent = videoContainer.parent as? ViewGroup
+            parent?.removeView(videoContainer)
 
             fullscreenContainer = FrameLayout(this).apply {
                 setBackgroundColor(Color.BLACK)
                 addView(
-                    playerView,
+                    videoContainer,
                     FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -795,18 +817,29 @@ class MainActivity : Activity() {
             (fullscreenContainer.parent as? ViewGroup)
                 ?.removeView(fullscreenContainer)
 
-            fullscreenContainer.removeView(playerView)
+            fullscreenContainer.removeView(videoContainer)
 
-            root.addView(
-                playerView,
-                2,
+            val landscapeLayout =
+                resources.configuration.orientation ==
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+            val videoParams = if (landscapeLayout) {
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(220)
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 0.58f
+                )
+            } else {
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
                 ).apply {
-                    topMargin = dp(14)
-                    bottomMargin = dp(12)
+                    bottomMargin = dp(8)
                 }
+            }
+
+            val mainContent = root.getChildAt(0) as? LinearLayout
+            mainContent?.addView(
+                videoContainer,
+                if (landscapeLayout) 1 else 0,
+                videoParams
             )
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
