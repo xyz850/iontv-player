@@ -29,6 +29,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 class MainActivity : Activity() {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
+    private lateinit var videoContainer: FrameLayout
     private lateinit var urlInput: EditText
     private lateinit var refererInput: EditText
     private lateinit var originInput: EditText
@@ -197,7 +198,7 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.BLACK)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
-        val videoContainer = FrameLayout(this).apply {
+        videoContainer = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
             addView(
                 playerView,
