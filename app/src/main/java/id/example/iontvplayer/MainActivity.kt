@@ -214,7 +214,7 @@ class MainActivity : Activity() {
         }
 
         val settingsButton = Button(this).apply {
-            text = "⚙ PENGATURAN PLAYER & SUMBER"
+            text = "⚙ PENGATURAN LAYAR & VIDEO"
             setOnClickListener {
                 settingsPanel.visibility =
                     if (settingsPanel.visibility == View.VISIBLE) View.GONE
@@ -224,7 +224,7 @@ class MainActivity : Activity() {
         root.addView(settingsButton)
 
         val settingsTitle = TextView(this).apply {
-            text = "PENGATURAN PLAYER & SUMBER"
+            text = "PENGATURAN LAYAR & VIDEO"
             setTextColor(accent)
             textSize = 14f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -328,7 +328,7 @@ class MainActivity : Activity() {
         }
         settingsPanel.addView(brightnessBar)
 
-        urlInput = field("URL stream atau M3U8", "https://bit.ly/KPL203")
+        urlInput = field("URL playlist atau stream", "https://bit.ly/KPL203")
         refererInput = field("Referer (opsional)", "")
         originInput = field("Origin (opsional)", "")
         uaInput = field(
@@ -336,14 +336,41 @@ class MainActivity : Activity() {
             "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
         )
 
-        // Field tetap dilampirkan agar pemulihan playlist otomatis berfungsi.
-        settingsPanel.addView(urlInput)
-        settingsPanel.addView(refererInput)
-        settingsPanel.addView(originInput)
-        settingsPanel.addView(uaInput)
+        val sourcePanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(4), 0, dp(4))
+            visibility = View.GONE
+        }
 
-        // Panel pengaturan ditampilkan saat tombol ditekan.
-        settingsPanel.visibility = View.GONE
+        val sourceToggle = Button(this).apply {
+            text = "▸ SUMBER & PLAYLIST"
+            setOnClickListener {
+                val showSource = sourcePanel.visibility != View.VISIBLE
+                sourcePanel.visibility =
+                    if (showSource) View.VISIBLE else View.GONE
+                text = if (showSource) {
+                    "▾ SUMBER & PLAYLIST"
+                } else {
+                    "▸ SUMBER & PLAYLIST"
+                }
+            }
+        }
+
+        settingsPanel.addView(sourceToggle)
+        settingsPanel.addView(sourcePanel)
+
+        val sourceHint = TextView(this).apply {
+            text = "URL playlist/stream dan header HTTP opsional"
+            textSize = 12f
+            setTextColor(muted)
+            setPadding(0, dp(4), 0, dp(4))
+        }
+
+        sourcePanel.addView(sourceHint)
+        sourcePanel.addView(urlInput)
+        sourcePanel.addView(refererInput)
+        sourcePanel.addView(originInput)
+        sourcePanel.addView(uaInput)
 
         val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -351,7 +378,7 @@ class MainActivity : Activity() {
         }
 
         val play = Button(this).apply {
-            text = "PUTAR"
+            text = "PUTAR / MUAT PLAYLIST"
             setTextColor(Color.BLACK)
             setBackgroundColor(accent)
             setOnClickListener { playStream() }
@@ -372,7 +399,9 @@ class MainActivity : Activity() {
             }
         )
         buttons.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f))
-        settingsPanel.addView(buttons)
+        sourcePanel.addView(buttons)
+
+        settingsPanel.visibility = View.GONE
 
         val channelContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1179,8 +1208,11 @@ class MainActivity : Activity() {
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
+                            val detail = error.message
+                                ?: error.cause?.message
+                                ?: "Tidak ada detail tambahan"
                             status.text =
-                                "Gagal memutar: ${error.errorCodeName}. Periksa URL, koneksi, dan izin stream."
+                                "Gagal memutar: ${error.errorCodeName}\n$detail\nPeriksa URL, koneksi, header, format stream, atau DRM."
                         }
                     })
                     exo.prepare()
