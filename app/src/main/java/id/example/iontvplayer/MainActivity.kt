@@ -38,6 +38,9 @@ class MainActivity : Activity() {
     private lateinit var resolutionSpinner: Spinner
     private lateinit var orientationSpinner: Spinner
     private lateinit var brightnessBar: SeekBar
+    private lateinit var channelSpinner: Spinner
+    private var playlistChannels: List<PlaylistEntry> = emptyList()
+    private var loadedPlaylistUrl: String? = null
 
     private var fullscreen = false
     private var videoOptions: List<VideoOption> = emptyList()
@@ -48,6 +51,11 @@ class MainActivity : Activity() {
         val label: String,
         val group: Tracks.Group,
         val trackIndex: Int
+    )
+
+    private data class PlaylistEntry(
+        val name: String,
+        val url: String
     )
 
     private val bg = Color.rgb(16, 17, 20)
@@ -267,6 +275,29 @@ class MainActivity : Activity() {
         buttons.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f))
         root.addView(buttons)
 
+        val channelLabel = TextView(this).apply {
+            text = "DAFTAR CHANNEL"
+            textSize = 13f
+            setTextColor(accent)
+            setPadding(0, dp(10), 0, dp(3))
+        }
+        root.addView(channelLabel)
+
+        channelSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("Playlist belum dimuat")
+            )
+        }
+        root.addView(
+            channelSpinner,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(48)
+            )
+        )
+
         status = TextView(this).apply {
             text = "Masukkan URL stream yang kamu punya atau berhak akses."
             textSize = 12f
@@ -436,20 +467,149 @@ class MainActivity : Activity() {
             return
         }
 
+        val headers = mutableMapOf<String, String>()
+        refererInput.text.toString().trim()
+            .takeIf { it.isNotEmpty() }
+            ?.let { headers["Referer"] = it }
+        originInput.text.toString().trim()
+            .takeIf { it.isNotEmpty() }
+            ?.let { headers["Origin"] = it }
+        uaInput.text.toString().trim()
+            .takeIf { it.isNotEmpty() }
+            ?.let { headers["User-Agent"] = it }
+
+        if (loadedPlaylistUrl == url && playlistChannels.isNotEmpty()) {
+            val selected =
+                playlistChannels.getOrNull(channelSpinner.selectedItemPosition)
+            if (selected == null) {
+                status.text = "Pilih channel terlebih dahulu."
+                return
+            }
+            playMedia(selected.url, headers)
+            return
+        }
+
+        val path = url.substringBefore("?").lowercase()
+        val looksLikePlaylist = path.endsWith(".m3u") ||
+            url.contains("bit.ly/", ignoreCase = true)
+
+        if (looksLikePlaylist) {
+            loadPlaylist(url, headers)
+        } else {
+            playMedia(url, headers)
+        }
+    }
+
+    private fun loadPlaylist(url: String, headers: Map<String, String>) {
+        status.text = "Mengunduh dan membaca playlist…"
+
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                connection =
+                    (java.net.URL(url).openConnection()
+                        as java.net.HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 15000
+                        readTimeout = 20000
+                        requestMethod = "GET"
+                        setRequestProperty("Accept", "*/*")
+                        headers.forEach { (name, value) ->
+                            setRequestProperty(name, value)
+                        }
+                    }
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("Server mengembalikan HTTP $code")
+                }
+
+                val text = connection.inputStream
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+
+                val finalUrl = connection.url.toString()
+                val channels = parsePlaylist(text, finalUrl)
+
+                runOnUiThread {
+                    if (channels.isEmpty()) {
+                        loadedPlaylistUrl = null
+                        playlistChannels = emptyList()
+                        status.text =
+                            "Playlist tidak berisi channel yang dikenali. Periksa format M3U."
+                    } else {
+                        loadedPlaylistUrl = url
+                        playlistChannels = channels
+                        channelSpinner.adapter = ArrayAdapter(
+                            this,
+                            android.R.layout.simple_spinner_dropdown_item,
+                            channels.map { it.name }
+                        )
+                        channelSpinner.setSelection(0)
+                        status.text =
+                            "Playlist dimuat: ${channels.size} channel. Pilih channel, lalu tekan PUTAR."
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    status.text =
+                        "Gagal membaca playlist: ${e.message ?: "koneksi atau format tidak valid"}"
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
+    }
+
+    private fun parsePlaylist(
+        text: String,
+        baseUrl: String
+    ): List<PlaylistEntry> {
+        val header = text.indexOf("#EXTM3U", ignoreCase = true)
+        val body = if (header >= 0) text.substring(header) else text
+        val lines = body.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
+        val result = mutableListOf<PlaylistEntry>()
+        var pendingName: String? = null
+
+        for (line in lines) {
+            if (line.startsWith("#EXTINF", ignoreCase = true)) {
+                val comma = line.indexOf(',')
+                val title =
+                    if (comma >= 0) line.substring(comma + 1).trim() else ""
+
+                val tvgName = Regex("""tvg-name="([^"]+)"""")
+                    .find(line)?.groupValues?.getOrNull(1)
+
+                pendingName = tvgName?.takeIf { it.isNotBlank() }
+                    ?: title.takeIf { it.isNotBlank() }
+                    ?: "Channel ${result.size + 1}"
+            } else if (!line.startsWith("#") && pendingName != null) {
+                try {
+                    val resolved = java.net.URL(
+                        java.net.URL(baseUrl), line
+                    ).toString()
+
+                    if (resolved.startsWith("http://") ||
+                        resolved.startsWith("https://")) {
+                        result.add(PlaylistEntry(pendingName!!, resolved))
+                    }
+                } catch (_: Exception) {
+                    // Abaikan URL playlist yang tidak valid.
+                }
+                pendingName = null
+            }
+        }
+
+        return result
+    }
+
+    private fun playMedia(url: String, headers: Map<String, String>) {
         releasePlayer()
 
         try {
-            val headers = mutableMapOf<String, String>()
-            refererInput.text.toString().trim()
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers["Referer"] = it }
-            originInput.text.toString().trim()
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers["Origin"] = it }
-            uaInput.text.toString().trim()
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers["User-Agent"] = it }
-
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true)
                 .setDefaultRequestProperties(headers)
@@ -463,16 +623,21 @@ class MainActivity : Activity() {
                 .also { exo ->
                     playerView.player = exo
                     val itemBuilder = MediaItem.Builder().setUri(url)
+                    val cleanUrl = url.substringBefore("?")
 
-                    if (url.substringBefore("?").endsWith(".m3u8", true)) {
-                        itemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
+                    when {
+                        cleanUrl.endsWith(".m3u8", true) ->
+                            itemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
+                        cleanUrl.endsWith(".mpd", true) ->
+                            itemBuilder.setMimeType(MimeTypes.APPLICATION_MPD)
                     }
 
                     exo.setMediaItem(itemBuilder.build())
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             status.text = when (playbackState) {
-                                Player.STATE_BUFFERING -> "Menghubungkan dan buffering…"
+                                Player.STATE_BUFFERING ->
+                                    "Menghubungkan dan buffering…"
                                 Player.STATE_READY -> "Stream siap diputar."
                                 Player.STATE_ENDED -> "Stream selesai."
                                 Player.STATE_IDLE -> "Siap."
