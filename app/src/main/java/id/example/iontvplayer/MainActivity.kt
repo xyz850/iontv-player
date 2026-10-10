@@ -82,12 +82,22 @@ class MainActivity : Activity() {
         window.navigationBarColor = bg
         buildUi()
 
-        // Pulihkan URL dan mulai memuat konten secara otomatis.
+        // Pulihkan URL tersimpan; gunakan nilai bawaan kolom jika belum ada.
         val savedPlaylistUrl =
-            appPrefs.getString("playlist_url", null)?.trim().orEmpty()
+            appPrefs.getString("playlist_url", null)
+                ?.trim()
+                .orEmpty()
+                .ifBlank { urlInput.text.toString().trim() }
 
         if (savedPlaylistUrl.isNotBlank()) {
-            urlInput.setText(savedPlaylistUrl)
+            if (urlInput.text.toString() != savedPlaylistUrl) {
+                urlInput.setText(savedPlaylistUrl)
+            }
+
+            // Simpan URL yang dipakai agar tersedia pada pembukaan berikutnya.
+            appPrefs.edit()
+                .putString("playlist_url", savedPlaylistUrl)
+                .apply()
 
             urlInput.post {
                 status.text = "Memulihkan playlist tersimpan…"
