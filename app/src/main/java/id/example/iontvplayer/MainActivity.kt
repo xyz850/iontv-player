@@ -1395,7 +1395,11 @@ class MainActivity : Activity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setDefaultRequestProperties(headers)
 
-            player = ExoPlayer.Builder(this)
+            player = ExoPlayer.Builder(
+                this,
+                androidx.media3.exoplayer.DefaultRenderersFactory(this)
+                    .setEnableDecoderFallback(true)
+            )
                 .setMediaSourceFactory(
                     DefaultMediaSourceFactory(this)
                         .setDataSourceFactory(httpFactory)
