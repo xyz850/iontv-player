@@ -229,42 +229,48 @@ class MainActivity : Activity() {
             val column = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(3), 0, dp(3), 0)
+                setPadding(dp(1), 0, dp(1), 0)
             }
             column.addView(view, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
             ))
             controlsRow.addView(column, LinearLayout.LayoutParams(
-                dp(width), dp(56)
+                dp(width), dp(44)
             ))
+        }
+
+        fun styleIconButton(
+            button: Button,
+            symbol: String,
+            description: String
+        ) {
+            button.text = symbol
+            button.contentDescription = description
+            button.textSize = 21f
+            button.setTextColor(accent)
+            button.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            button.stateListAnimator = null
+            button.minWidth = 0
+            button.minHeight = 0
+            button.setPadding(0, 0, 0, 0)
         }
 
         val videoSettingsButton = Button(this).apply {
-            text = "⚙"
-            contentDescription = "Pengaturan layar dan video"
-            textSize = 20f
-            setTextColor(accent)
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            stateListAnimator = null
-            minWidth = 0
-            minHeight = 0
-            // Aksi tombol dipasang setelah sourcePanel dibuat.
+            styleIconButton(this, "⚙", "Buka atau tutup pengaturan sumber")
         }
+        addControl(videoSettingsButton, 44)
 
         val fullButton = Button(this).apply {
-            text = "⛶"
-            contentDescription = "Layar penuh"
-            textSize = 22f
+            styleIconButton(this, "⛶", "Layar penuh")
             setOnClickListener { toggleFullscreen() }
         }
-        addControl(fullButton, 60)
+        addControl(fullButton, 44)
 
         val exitButton = Button(this).apply {
-            text = "EXIT"
-            contentDescription = "Keluar dari aplikasi"
+            styleIconButton(this, "⏻", "Keluar dari aplikasi")
             setOnClickListener { finish() }
         }
-        addControl(exitButton, 72)
+        addControl(exitButton, 44)
 
         fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
             val column = LinearLayout(this).apply {
@@ -413,7 +419,9 @@ class MainActivity : Activity() {
         }
 
         videoSettingsButton.setOnClickListener {
-            sourcePanel.visibility = View.GONE
+            sourcePanel.visibility =
+                if (sourcePanel.visibility == View.VISIBLE) View.GONE
+                else View.VISIBLE
         }
 
         // Sumber dan playlist tetap tersedia tanpa tombol lipat.
@@ -467,9 +475,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
         }
 
-        // Satukan pengaturan, tombol player, dan channel
-        // di dalam area scroll yang sama.
-        channelContent.addView(settingsPanel)
+        // Panel kontrol dipasang di luar area scroll channel.
 
         val channelLabel = TextView(this).apply {
             text = "DAFTAR CHANNEL"
@@ -549,9 +555,25 @@ class MainActivity : Activity() {
         }
 
         if (landscapeLayout) {
-            // Panel channel di kiri, video di kanan.
-            mainContent.addView(
+            // Kontrol tetap di atas daftar channel pada sisi kiri.
+            val channelSide = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            channelSide.addView(
+                settingsPanel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            channelSide.addView(
                 scroll,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+                )
+            )
+            mainContent.addView(
+                channelSide,
                 LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.MATCH_PARENT, 0.42f)
             )
@@ -561,14 +583,21 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT, 0.58f)
             )
         } else {
-            // Pada mode potret, video di atas.
+            // Potret: video, kontrol, lalu daftar channel yang bisa digulir.
             mainContent.addView(
                 videoContainer,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
                 ).apply {
-                    bottomMargin = dp(8)
+                    bottomMargin = dp(4)
                 }
+            )
+            mainContent.addView(
+                settingsPanel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
             )
             mainContent.addView(
                 scroll,
