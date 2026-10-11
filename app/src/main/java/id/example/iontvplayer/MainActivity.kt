@@ -1050,6 +1050,79 @@ class MainActivity : Activity() {
                 )
             )
 
+            // Pilihan ukuran video vertikal, minimalis dan tanpa background.
+            val sizeModes = listOf(
+                "fit" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                "fill" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL,
+                "zoom" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            )
+
+            val sizeButtons = mutableListOf<Pair<TextView, Int>>()
+
+            val sizeSelector = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(0, dp(3), 0, dp(3))
+                setBackgroundColor(Color.TRANSPARENT)
+                elevation = 0f
+            }
+
+            fun updateSizeSelection(selectedMode: Int) {
+                sizeButtons.forEach { (label, mode) ->
+                    val selected = mode == selectedMode
+                    label.setTextColor(
+                        if (selected) Color.WHITE
+                        else Color.argb(155, 255, 255, 255)
+                    )
+                    label.alpha = if (selected) 1f else 0.72f
+                    label.paint.isFakeBoldText = selected
+                }
+            }
+
+            sizeModes.forEach { (labelText, mode) ->
+                val label = TextView(this).apply {
+                    text = labelText
+                    textSize = 12f
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.TRANSPARENT)
+                    minWidth = 0
+                    minimumWidth = 0
+                    minHeight = 0
+                    setPadding(dp(8), dp(5), dp(8), dp(5))
+                    contentDescription = "Ukuran video $labelText"
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        playerView.resizeMode = mode
+                        updateSizeSelection(mode)
+                    }
+                }
+
+                sizeButtons.add(label to mode)
+                sizeSelector.addView(
+                    label,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        dp(30)
+                    )
+                )
+            }
+
+            fullscreenContainer.addView(
+                sizeSelector,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.END or Gravity.TOP
+                ).apply {
+                    topMargin = dp(54)
+                    rightMargin = dp(10)
+                }
+            )
+
+            updateSizeSelection(playerView.resizeMode)
+
             // Volume media Android: slider horizontal diputar menjadi vertikal.
             val audioManager =
                 getSystemService(AUDIO_SERVICE) as android.media.AudioManager
