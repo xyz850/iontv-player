@@ -344,6 +344,7 @@ class MainActivity : Activity() {
                         // Fit dan Fill menampilkan seluruh gambar tanpa crop.
                         // Fill membuka fullscreen setelah event spinner selesai.
                         playerView.resizeMode = when (position) {
+                            1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                             2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                             else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                         }
@@ -1075,7 +1076,7 @@ class MainActivity : Activity() {
                 ),
                 Triple(
                     "Fill",
-                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL,
                     1
                 ),
                 Triple(
