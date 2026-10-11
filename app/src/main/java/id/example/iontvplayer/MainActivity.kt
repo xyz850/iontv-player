@@ -1065,10 +1065,12 @@ class MainActivity : Activity() {
             path.endsWith(".m3u8") ||
             url.contains("bit.ly/", ignoreCase = true)
 
-        if (looksLikePlaylist) {
-            loadPlaylist(url, headers)
-        } else {
-            detectPlaylistOrPlayMedia(url, headers)
+        val looksLikeDash = path.endsWith(".mpd")
+
+        when {
+            looksLikeDash -> playMedia(url, headers)
+            looksLikePlaylist -> loadPlaylist(url, headers)
+            else -> detectPlaylistOrPlayMedia(url, headers)
         }
     }
 
