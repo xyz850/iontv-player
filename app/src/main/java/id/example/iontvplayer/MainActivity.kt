@@ -1430,21 +1430,19 @@ class MainActivity : Activity() {
 
                         override fun onTracksChanged(tracks: Tracks) {
                             updateVideoOptions(tracks)
-
-                            val videoGroups = tracks.groups.count {
-                                it.type == C.TRACK_TYPE_VIDEO
-                            }
-                            val audioGroups = tracks.groups.count {
-                                it.type == C.TRACK_TYPE_AUDIO
-                            }
-
-                            status.text =
-                                "Track terdeteksi — video: $videoGroups, audio: $audioGroups. Menunggu gambar…"
-
-                            android.util.Log.d(
-                                "IONTVPlayer",
-                                "Tracks: videoGroups=$videoGroups, audioGroups=$audioGroups"
-                            )
+                            val details = tracks.groups.flatMap { g ->
+                                (0 until g.length).map { i ->
+                                    val f = g.getTrackFormat(i)
+                                    val kind = when (g.type) {
+                                        C.TRACK_TYPE_VIDEO -> "VIDEO"
+                                        C.TRACK_TYPE_AUDIO -> "AUDIO"
+                                        else -> "LAIN"
+                                    }
+                                    "$kind mime=${f.sampleMimeType ?: "?"} codec=${f.codecs ?: "?"} ukuran=${f.width}x${f.height} dipilih=${g.isSelected(i)} didukung=${g.isTrackSupported(i)}"
+                                }
+                            }.take(8).joinToString("\n")
+                            status.text = "Track:\n$details"
+                            android.util.Log.d("IONTVPlayer", "Tracks:\n$details")
                         }
 
                         override fun onRenderedFirstFrame() {
@@ -1465,11 +1463,15 @@ class MainActivity : Activity() {
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
-                            val detail = error.message
-                                ?: error.cause?.message
-                                ?: "Tidak ada detail tambahan"
-                            status.text =
-                                "Gagal memutar: ${error.errorCodeName}\n$detail\nPeriksa URL, koneksi, header, format stream, atau DRM."
+                            val causes = mutableListOf<String>()
+                            var e: Throwable? = error
+                            while (e != null && causes.size < 8) {
+                                causes.add("${e.javaClass.simpleName}: ${e.message ?: "(tanpa pesan)"}")
+                                e = e.cause
+                            }
+                            val detail = causes.joinToString("\n")
+                            status.text = "GAGAL ${error.errorCodeName} (${error.errorCode})\n$detail"
+                            android.util.Log.e("IONTVPlayer", "Playback error:\n$detail", error)
                         }
                     })
                     exo.prepare()
