@@ -341,17 +341,20 @@ class MainActivity : Activity() {
                         parent: AdapterView<*>?, view: View?,
                         position: Int, id: Long
                     ) {
+                        // Fit dan Fill menampilkan seluruh gambar tanpa crop.
+                        // Fill membuka fullscreen setelah event spinner selesai.
                         playerView.resizeMode = when (position) {
-                            // Tombol Fill menjalankan mode responsif agar gambar utuh.
-                            1 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                             2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                             else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                         }
 
-                        // Fill membuka video dalam layar penuh.
-                        // Di fullscreen, pilihan ukuran tidak membuka ulang layar.
-                        if (position == 1 && !fullscreen) {
-                            toggleFullscreen()
+                        playerView.post {
+                            playerView.requestLayout()
+                            playerView.invalidate()
+
+                            if (position == 1 && !fullscreen) {
+                                toggleFullscreen()
+                            }
                         }
                     }
                 }
