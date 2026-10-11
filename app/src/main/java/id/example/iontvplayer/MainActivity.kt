@@ -276,7 +276,7 @@ class MainActivity : Activity() {
             stateListAnimator = null
             setOnClickListener { finish() }
         }
-        addControl(exitButton, 44)
+        addControl(exitButton, 30)
 
         fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
             val column = LinearLayout(this).apply {
@@ -313,7 +313,7 @@ class MainActivity : Activity() {
                     }
                 }
         }
-        addSpinnerControl("Orientasi", orientationSpinner, 125)
+        addSpinnerControl("", orientationSpinner, 100)
 
         val sizeSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
@@ -336,7 +336,7 @@ class MainActivity : Activity() {
                     }
                 }
         }
-        addSpinnerControl("Ukuran video", sizeSpinner, 112)
+        addSpinnerControl("", sizeSpinner, 90)
 
         resolutionSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
@@ -424,20 +424,15 @@ class MainActivity : Activity() {
             visibility = View.GONE
         }
 
-        videoSettingsButton.setOnClickListener {
-            sourcePanel.visibility =
-                if (sourcePanel.visibility == View.VISIBLE) View.GONE
-                else View.VISIBLE
-        }
+        videoSettingsButton.visibility = View.GONE
+        sourcePanel.visibility = View.GONE
+        videoSettingsButton.setOnClickListener { }
 
         // Sumber dan playlist tetap tersedia tanpa tombol lipat.
         settingsPanel.addView(sourcePanel)
 
         val sourceHint = TextView(this).apply {
-            text = "URL playlist/stream dan header HTTP opsional"
-            textSize = 12f
-            setTextColor(muted)
-            setPadding(0, dp(4), 0, dp(4))
+            visibility = View.GONE
         }
 
         sourcePanel.addView(sourceHint)
@@ -886,7 +881,7 @@ class MainActivity : Activity() {
             val exitFullscreenButton = Button(this).apply {
                 text = "✕"
                 contentDescription = "Keluar dari layar penuh"
-                textSize = 22f
+                textSize = 16f
                 setTextColor(Color.WHITE)
                 setBackgroundColor(Color.TRANSPARENT)
                 stateListAnimator = null
@@ -896,7 +891,7 @@ class MainActivity : Activity() {
             fullscreenContainer.addView(
                 exitFullscreenButton,
                 FrameLayout.LayoutParams(
-                    dp(52), dp(52), Gravity.TOP or Gravity.END
+                    dp(36), dp(36), Gravity.TOP or Gravity.END
                 )
             )
 
