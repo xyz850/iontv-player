@@ -1438,7 +1438,7 @@ class MainActivity : Activity() {
                                         C.TRACK_TYPE_AUDIO -> "AUDIO"
                                         else -> "LAIN"
                                     }
-                                    "$kind mime=${f.sampleMimeType ?: "?"} codec=${f.codecs ?: "?"} ukuran=${f.width}x${f.height} dipilih=${g.isSelected(i)} didukung=${g.isTrackSupported(i)}"
+                                    "$kind mime=${f.sampleMimeType ?: "?"} codec=${f.codecs ?: "?"} ukuran=${f.width}x${f.height} dipilih=${g.isTrackSelected(i)} didukung=${g.isTrackSupported(i)}"
                                 }
                             }.take(8).joinToString("\n")
                             status.text = "Track:\n$details"
