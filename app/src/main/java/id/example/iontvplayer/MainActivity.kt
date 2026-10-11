@@ -1062,10 +1062,24 @@ class MainActivity : Activity() {
             )
 
             // Pilihan ukuran video vertikal, minimalis dan tanpa background.
+            // Fill memakai mode responsif FIT agar gambar tidak terpotong.
+            // Posisi pilihan dipisahkan dari mode render agar Fill tetap tersorot.
             val sizeModes = listOf(
-                "fit" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
-                "Fill" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL,
-                "zoom" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                Triple(
+                    "fit",
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                    0
+                ),
+                Triple(
+                    "Fill",
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                    1
+                ),
+                Triple(
+                    "zoom",
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                    2
+                )
             )
 
             val sizeButtons = mutableListOf<Pair<TextView, Int>>()
@@ -1078,9 +1092,9 @@ class MainActivity : Activity() {
                 elevation = 0f
             }
 
-            fun updateSizeSelection(selectedMode: Int) {
-                sizeButtons.forEach { (label, mode) ->
-                    val selected = mode == selectedMode
+            fun updateSizeSelection(selectedPosition: Int) {
+                sizeButtons.forEach { (label, position) ->
+                    val selected = position == selectedPosition
                     label.setTextColor(
                         if (selected) Color.WHITE
                         else Color.argb(155, 255, 255, 255)
@@ -1090,7 +1104,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            sizeModes.forEach { (labelText, mode) ->
+            sizeModes.forEach { (labelText, mode, position) ->
                 val label = TextView(this).apply {
                     text = labelText
                     textSize = 12f
@@ -1107,20 +1121,15 @@ class MainActivity : Activity() {
                     setOnClickListener {
                         playerView.resizeMode = mode
 
-                        // Sinkronkan spinner utama dengan tombol fullscreen.
-                        val selectedPosition =
-                            sizeModes.indexOfFirst { it.second == mode }
-                                .coerceAtLeast(0)
-
-                        if (sizeSpinner.selectedItemPosition != selectedPosition) {
-                            sizeSpinner.setSelection(selectedPosition)
+                        if (sizeSpinner.selectedItemPosition != position) {
+                            sizeSpinner.setSelection(position)
                         }
 
-                        updateSizeSelection(mode)
+                        updateSizeSelection(position)
                     }
                 }
 
-                sizeButtons.add(label to mode)
+                sizeButtons.add(label to position)
                 sizeSelector.addView(
                     label,
                     LinearLayout.LayoutParams(
@@ -1142,7 +1151,7 @@ class MainActivity : Activity() {
                 }
             )
 
-            updateSizeSelection(playerView.resizeMode)
+            updateSizeSelection(sizeSpinner.selectedItemPosition)
 
             // Volume media Android: slider horizontal diputar menjadi vertikal.
             val audioManager =
