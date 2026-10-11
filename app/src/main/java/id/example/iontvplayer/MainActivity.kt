@@ -248,11 +248,7 @@ class MainActivity : Activity() {
             stateListAnimator = null
             minWidth = 0
             minHeight = 0
-            setOnClickListener {
-                sourcePanel.visibility =
-                    if (sourcePanel.visibility == View.VISIBLE) View.GONE
-                    else View.VISIBLE
-            }
+            // Aksi tombol dipasang setelah sourcePanel dibuat.
         }
 
         val fullButton = Button(this).apply {
@@ -414,6 +410,12 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(4), 0, dp(4))
             visibility = View.GONE
+        }
+
+        videoSettingsButton.setOnClickListener {
+            sourcePanel.visibility =
+                if (sourcePanel.visibility == View.VISIBLE) View.GONE
+                else View.VISIBLE
         }
 
         // Sumber dan playlist tetap tersedia tanpa tombol lipat.
