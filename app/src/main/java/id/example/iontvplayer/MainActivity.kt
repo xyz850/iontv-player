@@ -92,11 +92,11 @@ class MainActivity : Activity() {
         val drmLicenseHeaders: Map<String, String> = emptyMap()
     )
 
-    private val bg = Color.rgb(16, 17, 20)
-    private val panel = Color.rgb(29, 31, 37)
-    private val accent = Color.rgb(66, 211, 146)
+    private val bg = Color.rgb(5, 8, 18)
+    private val panel = Color.rgb(16, 22, 36)
+    private val accent = Color.rgb(0, 245, 255)
     private val white = Color.WHITE
-    private val muted = Color.rgb(170, 175, 185)
+    private val muted = Color.rgb(157, 185, 200)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -233,8 +233,13 @@ class MainActivity : Activity() {
 
         val settingsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(panel)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(panel)
+                setStroke(dp(1), accent)
+                cornerRadius = dp(8).toFloat()
+            }
             setPadding(dp(4))
+            elevation = dp(3).toFloat()
         }
         settingsPanelView = settingsPanel
 
@@ -293,7 +298,7 @@ class MainActivity : Activity() {
 
         val exitButton = android.widget.ImageButton(this).apply {
             setImageResource(R.drawable.ic_power)
-            imageTintList = null
+            imageTintList = android.content.res.ColorStateList.valueOf(accent)
             contentDescription = "Keluar dari aplikasi"
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
@@ -301,7 +306,7 @@ class MainActivity : Activity() {
             stateListAnimator = null
             setOnClickListener { finish() }
         }
-        addControl(exitButton, 30)
+        addControl(exitButton, 44)
 
         fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
             val column = LinearLayout(this).apply {
@@ -1017,15 +1022,19 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(8), 0, dp(8), 0)
-                setBackgroundColor(Color.argb(175, 0, 0, 0))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.rgb(5, 8, 18))
+                    setStroke(dp(1), accent)
+                    cornerRadius = dp(8).toFloat()
+                }
             }
 
             fun makeButton(label: String, description: String): Button {
                 return Button(this).apply {
                     text = label
                     contentDescription = description
-                    textSize = 16f
-                    setTextColor(Color.WHITE)
+                    textSize = 20f
+                    setTextColor(accent)
                     setBackgroundColor(Color.TRANSPARENT)
                     stateListAnimator = null
                     minWidth = dp(44)
@@ -1182,7 +1191,7 @@ class MainActivity : Activity() {
                     text = labelText
                     textSize = 12f
                     gravity = Gravity.CENTER
-                    setTextColor(Color.WHITE)
+                    setTextColor(accent)
                     setBackgroundColor(Color.TRANSPARENT)
                     minWidth = 0
                     minimumWidth = 0
@@ -1476,7 +1485,7 @@ class MainActivity : Activity() {
                     (this as? TextView)?.apply {
                         textSize = 10f
                         maxLines = 1
-                        setTextColor(Color.WHITE)
+                        setTextColor(accent)
                         setPadding(dp(4), 0, dp(2), 0)
                     }
                 }
