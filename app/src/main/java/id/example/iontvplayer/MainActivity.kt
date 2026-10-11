@@ -413,9 +413,7 @@ class MainActivity : Activity() {
         }
 
         videoSettingsButton.setOnClickListener {
-            sourcePanel.visibility =
-                if (sourcePanel.visibility == View.VISIBLE) View.GONE
-                else View.VISIBLE
+            sourcePanel.visibility = View.GONE
         }
 
         // Sumber dan playlist tetap tersedia tanpa tombol lipat.
@@ -456,11 +454,11 @@ class MainActivity : Activity() {
 
         buttons.addView(
             play,
-            LinearLayout.LayoutParams(0, dp(50), 1f).apply {
-                marginEnd = dp(8)
+            LinearLayout.LayoutParams(0, dp(40), 1f).apply {
+                marginEnd = dp(4)
             }
         )
-        buttons.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f))
+        buttons.addView(stop, LinearLayout.LayoutParams(0, dp(40), 1f))
         sourcePanel.addView(buttons)
 
         settingsPanel.visibility = View.VISIBLE
@@ -655,7 +653,7 @@ class MainActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setPadding(dp(6), dp(4), dp(6), dp(4))
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = dp(10).toFloat()
@@ -668,8 +666,8 @@ class MainActivity : Activity() {
             }
 
             val logo = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply {
-                    marginEnd = dp(12)
+                layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply {
+                    marginEnd = dp(8)
                 }
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 setImageResource(android.R.drawable.ic_menu_gallery)
@@ -679,7 +677,7 @@ class MainActivity : Activity() {
 
             val name = TextView(this).apply {
                 text = entry.name
-                textSize = 14f
+                textSize = 12f
                 setTextColor(white)
                 gravity = Gravity.CENTER_VERTICAL
                 maxLines = 2
@@ -730,8 +728,8 @@ class MainActivity : Activity() {
 
             val params = GridLayout.LayoutParams().apply {
                 width = cardWidth
-                height = dp(64)
-                setMargins(dp(5), dp(4), dp(5), dp(4))
+                height = dp(48)
+                setMargins(dp(3), dp(3), dp(3), dp(3))
             }
             channelGrid.addView(card, params)
 
