@@ -59,6 +59,8 @@ class MainActivity : Activity() {
     }
 
     private var fullscreen = false
+    private var fullscreenPreviousRequestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     private var fullscreenPreviousLayoutOrientation =
         android.content.res.Configuration.ORIENTATION_PORTRAIT
     private var fullscreenOriginalParent: ViewGroup? = null
@@ -913,6 +915,7 @@ class MainActivity : Activity() {
                 return
             }
 
+            fullscreenPreviousRequestedOrientation = requestedOrientation
             fullscreenOriginalParent = parent
             fullscreenOriginalIndex = parent.indexOfChild(videoContainer)
             fullscreenOriginalLayoutParams = videoContainer.layoutParams
@@ -1265,8 +1268,7 @@ class MainActivity : Activity() {
             root.visibility = View.INVISIBLE
 
             fullscreen = true
-            // Pertahankan orientasi aktif agar layout lama tidak tertinggal
-            // setelah fullscreen ditutup.
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
@@ -1324,7 +1326,7 @@ class MainActivity : Activity() {
             root.invalidate()
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            // Orientasi tidak diubah saat keluar fullscreen.
+            requestedOrientation = fullscreenPreviousRequestedOrientation
         }
     }
     private fun compactSpinnerAdapter(
@@ -1869,6 +1871,14 @@ class MainActivity : Activity() {
 
                     exo.setMediaItem(itemBuilder.build())
                     exo.addListener(object : Player.Listener {
+                        override fun onIsPlayingChanged(isPlaying: Boolean) {
+                            if (isPlaying) {
+                                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            } else {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
+                        }
+
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             status.text = when (playbackState) {
                                 Player.STATE_BUFFERING ->
@@ -2011,6 +2021,7 @@ class MainActivity : Activity() {
     }
 
     private fun releasePlayer() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (::playerView.isInitialized) playerView.player = null
         player?.release()
         player = null
