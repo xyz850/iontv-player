@@ -917,34 +917,262 @@ class MainActivity : Activity() {
 
             fullscreenContainer = FrameLayout(this).apply {
                 setBackgroundColor(Color.BLACK)
-                addView(videoContainer, FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    Gravity.CENTER
-                ))
+                addView(
+                    videoContainer,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        Gravity.CENTER
+                    )
+                )
             }
 
-            val exitButton = Button(this).apply {
-                text = "✕"
-                contentDescription = "Keluar dari layar penuh"
-                textSize = 16f
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.TRANSPARENT)
-                stateListAnimator = null
-                setOnClickListener { toggleFullscreen() }
+            // Bilah kontrol horizontal di bagian atas.
+            val toolbar = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), 0, dp(8), 0)
+                setBackgroundColor(Color.argb(175, 0, 0, 0))
             }
 
-            fullscreenContainer.addView(exitButton, FrameLayout.LayoutParams(
-                dp(36), dp(36), Gravity.TOP or Gravity.END
-            ))
+            fun makeButton(label: String, description: String): Button {
+                return Button(this).apply {
+                    text = label
+                    contentDescription = description
+                    textSize = 16f
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.TRANSPARENT)
+                    stateListAnimator = null
+                    minWidth = dp(44)
+                    minimumWidth = dp(44)
+                    setPadding(dp(6), 0, dp(6), 0)
+                }
+            }
 
-            (window.decorView as ViewGroup).addView(
+            val exitButton = makeButton("✕", "Keluar dari layar penuh")
+            toolbar.addView(
+                exitButton,
+                LinearLayout.LayoutParams(dp(48), dp(44))
+            )
+            exitButton.setOnClickListener { toggleFullscreen() }
+
+            val playButton = makeButton("▶", "Putar atau jeda")
+            toolbar.addView(
+                playButton,
+                LinearLayout.LayoutParams(dp(52), dp(44))
+            )
+            playButton.setOnClickListener {
+                val exo = player
+                if (exo != null) {
+                    if (exo.isPlaying) {
+                        exo.pause()
+                        playButton.text = "▶"
+                    } else {
+                        exo.play()
+                        playButton.text = "Ⅱ"
+                    }
+                }
+            }
+
+            val ccButton = makeButton("CC", "Aktifkan atau matikan subtitle")
+            toolbar.addView(
+                ccButton,
+                LinearLayout.LayoutParams(dp(52), dp(44))
+            )
+            ccButton.setOnClickListener {
+                val exo = player
+                if (exo == null) {
+                    android.widget.Toast.makeText(
+                        this, "Pemutar belum siap.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                val groups = exo.currentTracks.groups.filter { group ->
+                    group.type == C.TRACK_TYPE_TEXT &&
+                        (0 until group.length).any { i ->
+                            group.isTrackSupported(i)
+                        }
+                }
+
+                if (groups.isEmpty()) {
+                    android.widget.Toast.makeText(
+                        this,
+                        "Subtitle tidak tersedia atau belum dimuat oleh channel ini.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                val selected = groups.any { group ->
+                    (0 until group.length).any { i ->
+                        group.isTrackSelected(i)
+                    }
+                }
+
+                val builder = exo.trackSelectionParameters.buildUpon()
+                    .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+
+                if (selected) {
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                    ccButton.text = "CC"
+                    android.widget.Toast.makeText(
+                        this, "Subtitle dimatikan.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    val group = groups.first()
+                    val index = (0 until group.length).firstOrNull { i ->
+                        group.isTrackSupported(i)
+                    } ?: 0
+
+                    builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .addOverride(
+                            TrackSelectionOverride(group.mediaTrackGroup, index)
+                        )
+                    ccButton.text = "CC ✓"
+                    android.widget.Toast.makeText(
+                        this, "Subtitle diaktifkan.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                exo.trackSelectionParameters = builder.build()
+            }
+
+            fullscreenContainer.addView(
+                toolbar,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(48),
+                    Gravity.TOP
+                )
+            )
+
+            // Volume media Android: slider horizontal diputar menjadi vertikal.
+            val audioManager =
+                getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+
+            val volumeSlider = SeekBar(this).apply {
+                max = audioManager.getStreamMaxVolume(
+                    android.media.AudioManager.STREAM_MUSIC
+                ).coerceAtLeast(1)
+                progress = audioManager.getStreamVolume(
+                    android.media.AudioManager.STREAM_MUSIC
+                )
+                rotation = -90f
+                translationX = -dp(54).toFloat()
+                contentDescription = "Volume vertikal"
+            }
+
+            volumeSlider.setOnSeekBarChangeListener(
+                object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(
+                        seekBar: SeekBar?, progress: Int, fromUser: Boolean
+                    ) {
+                        if (fromUser) {
+                            audioManager.setStreamVolume(
+                                android.media.AudioManager.STREAM_MUSIC,
+                                progress,
+                                0
+                            )
+                        }
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                }
+            )
+
+            fullscreenContainer.addView(
+                volumeSlider,
+                FrameLayout.LayoutParams(
+                    dp(180), dp(40),
+                    Gravity.START or Gravity.CENTER_VERTICAL
+                )
+            )
+
+            val volumeLabel = TextView(this).apply {
+                text = "🔊"
+                textSize = 20f
+                gravity = Gravity.CENTER
+                contentDescription = "Volume"
+            }
+            fullscreenContainer.addView(
+                volumeLabel,
+                FrameLayout.LayoutParams(
+                    dp(44), dp(40),
+                    Gravity.START or Gravity.CENTER_VERTICAL
+                )
+            )
+
+            // Kecerahan jendela, dipulihkan saat keluar fullscreen.
+            val brightnessSlider = SeekBar(this).apply {
+                max = 100
+                progress = if (
+                    previousScreenBrightness >= 0f &&
+                    previousScreenBrightness <= 1f
+                ) {
+                    (previousScreenBrightness * 100).toInt().coerceIn(5, 100)
+                } else {
+                    50
+                }
+                rotation = -90f
+                translationX = dp(54).toFloat()
+                contentDescription = "Kecerahan vertikal"
+            }
+
+            brightnessSlider.setOnSeekBarChangeListener(
+                object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(
+                        seekBar: SeekBar?, progress: Int, fromUser: Boolean
+                    ) {
+                        if (fromUser) {
+                            val attrs = window.attributes
+                            attrs.screenBrightness =
+                                (progress.coerceIn(5, 100) / 100f)
+                            window.attributes = attrs
+                        }
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                }
+            )
+
+            fullscreenContainer.addView(
+                brightnessSlider,
+                FrameLayout.LayoutParams(
+                    dp(180), dp(40),
+                    Gravity.END or Gravity.CENTER_VERTICAL
+                )
+            )
+
+            val brightnessLabel = TextView(this).apply {
+                text = "☀"
+                textSize = 20f
+                gravity = Gravity.CENTER
+                contentDescription = "Kecerahan"
+            }
+            fullscreenContainer.addView(
+                brightnessLabel,
+                FrameLayout.LayoutParams(
+                    dp(44), dp(40),
+                    Gravity.END or Gravity.CENTER_VERTICAL
+                )
+            )
+
+            val decor = window.decorView as ViewGroup
+            decor.addView(
                 fullscreenContainer,
                 ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
             )
+            fullscreenContainer.bringToFront()
+            root.visibility = View.INVISIBLE
 
             fullscreen = true
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -952,6 +1180,7 @@ class MainActivity : Activity() {
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+
         } else {
             val parent = fullscreenOriginalParent
             val params = fullscreenOriginalLayoutParams
@@ -962,7 +1191,6 @@ class MainActivity : Activity() {
                 return
             }
 
-            // Pindahkan video kembali sebelum melepas overlay.
             (videoContainer.parent as? ViewGroup)?.removeView(videoContainer)
 
             try {
@@ -971,22 +1199,30 @@ class MainActivity : Activity() {
                 )
                 parent.addView(videoContainer, index, params)
             } catch (e: Exception) {
-                overlay.addView(videoContainer, FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    Gravity.CENTER
-                ))
+                overlay.addView(
+                    videoContainer,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        Gravity.CENTER
+                    )
+                )
                 status.text = "Gagal memulihkan video."
                 return
             }
 
             (overlay.parent as? ViewGroup)?.removeView(overlay)
 
+            val attrs = window.attributes
+            attrs.screenBrightness = previousScreenBrightness
+            window.attributes = attrs
+
             fullscreen = false
             fullscreenOriginalParent = null
             fullscreenOriginalIndex = -1
             fullscreenOriginalLayoutParams = null
 
+            root.visibility = View.VISIBLE
             videoContainer.visibility = View.VISIBLE
             playerView.visibility = View.VISIBLE
             parent.visibility = View.VISIBLE
@@ -997,7 +1233,6 @@ class MainActivity : Activity() {
             root.invalidate()
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            root.setPadding(dp(16))
             requestedOrientation = if (
                 fullscreenPreviousLayoutOrientation ==
                     android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -1008,7 +1243,6 @@ class MainActivity : Activity() {
             }
         }
     }
-
     private fun compactSpinnerAdapter(
         items: List<String>
     ): ArrayAdapter<String> {
