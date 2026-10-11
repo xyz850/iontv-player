@@ -1215,25 +1215,26 @@ class MainActivity : Activity() {
                 )
             }
 
-            val sizeToggle = makeButton("▣", "Buka pilihan Fit, Fill, Zoom").apply {
+            val sizeToggle = makeButton(
+                "▣", "Buka pilihan Fit, Fill, Zoom"
+            ).apply {
                 textSize = 20f
                 minWidth = 0
                 minimumWidth = 0
                 setPadding(0, 0, 0, 0)
             }
 
-            fullscreenControls.addView(
+            // Isi ruang kosong di ujung kanan bilah fullscreen.
+            toolbar.addView(
+                View(this),
+                LinearLayout.LayoutParams(0, dp(1), 1f)
+            )
+            toolbar.addView(
                 sizeToggle,
-                FrameLayout.LayoutParams(
-                    dp(44),
-                    dp(40),
-                    Gravity.END or Gravity.TOP
-                ).apply {
-                    topMargin = dp(54)
-                    rightMargin = dp(10)
-                }
+                LinearLayout.LayoutParams(dp(44), dp(44))
             )
 
+            // Menu pilihan muncul tepat di bawah bilah tombol.
             fullscreenControls.addView(
                 sizeSelector,
                 FrameLayout.LayoutParams(
@@ -1241,7 +1242,7 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     Gravity.END or Gravity.TOP
                 ).apply {
-                    topMargin = dp(98)
+                    topMargin = dp(50)
                     rightMargin = dp(10)
                 }
             )
