@@ -1458,57 +1458,48 @@ class MainActivity : Activity() {
                         override fun onTracksChanged(tracks: Tracks) {
                             updateVideoOptions(tracks)
 
-                            val details = tracks.groups.flatMap { g ->
-                                (0 until g.length).mapNotNull { i ->
-                                    val f = g.getTrackFormat(i)
-                                    val kind = when (g.type) {
-                                        C.TRACK_TYPE_VIDEO -> "VIDEO"
-                                        C.TRACK_TYPE_AUDIO -> "AUDIO"
-                                        else -> return@mapNotNull null
-                                    }
+                            val lines = mutableListOf<String>()
 
-                                    val raw = f.codecs
-                                        ?: f.sampleMimeType
-                                        ?: "?"
-
-                                    val codec = when {
-                                        raw.contains("avc", true) ||
-                                            raw.contains("h264", true) -> "H264"
-                                        raw.contains("hev", true) ||
-                                            raw.contains("h265", true) -> "H265/HEVC"
-                                        raw.contains("vp9", true) -> "VP9"
-                                        raw.contains("av01", true) -> "AV1"
-                                        raw.contains("mp4a", true) ||
-                                            raw.contains("aac", true) -> "AAC"
-                                        raw.contains("ac-3", true) -> "AC3"
-                                        raw.contains("ec-3", true) -> "EAC3"
-                                        else -> raw.substringAfterLast('/').take(24)
-                                    }
-
-                                    val size = if (
-                                        kind == "VIDEO" && f.width > 0 && f.height > 0
-                                    ) " ${f.width}x${f.height}" else ""
-
-                                    val support = if (g.isTrackSupported(i)) {
-                                        "DIDUKUNG"
-                                    } else {
-                                        "TIDAK DIDUKUNG"
-                                    }
-
-                                    val selected = if (g.isTrackSelected(i)) {
-                                        " | DIPILIH"
-                                    } else {
-                                        ""
-                                    }
-
-                                    "$kind: $codec$size | $support$selected"
+                            for (g in tracks.groups) {
+                                val kind = when (g.type) {
+                                    C.TRACK_TYPE_VIDEO -> "VIDEO"
+                                    C.TRACK_TYPE_AUDIO -> "AUDIO"
+                                    else -> continue
                                 }
-                            }.distinct().take(4).joinToString("\n")
 
+                                for (i in 0 until g.length) {
+                                    val f = g.getTrackFormat(i)
+                                    val supportCode = g.getTrackSupport(i)
+
+                                    val support = when (supportCode) {
+                                        C.FORMAT_HANDLED -> "DIDUKUNG"
+                                        C.FORMAT_EXCEEDS_CAPABILITIES -> "DI LUAR KEMAMPUAN"
+                                        C.FORMAT_UNSUPPORTED_DRM -> "DRM TIDAK DIDUKUNG"
+                                        C.FORMAT_UNSUPPORTED_SUBTYPE -> "CODEC TIDAK DIDUKUNG"
+                                        C.FORMAT_UNSUPPORTED_TYPE -> "JENIS FORMAT TIDAK DIDUKUNG"
+                                        else -> "STATUS $supportCode"
+                                    }
+
+                                    val mime = f.sampleMimeType ?: "MIME?"
+                                    val codec = f.codecs ?: "-"
+                                    val selected = if (g.isTrackSelected(i)) " | AKTIF" else ""
+                                    val extra = if (kind == "VIDEO") {
+                                        " | ${f.width}x${f.height} | fps=${f.frameRate}"
+                                    } else {
+                                        " | ${f.channelCount}ch | ${f.sampleRate}Hz"
+                                    }
+
+                                    lines.add(
+                                        "$kind: $mime | codec=$codec$extra | $support$selected"
+                                    )
+                                }
+                            }
+
+                            val details = lines.take(8).joinToString("\n")
                             diagnosticStatus.text = if (details.isBlank()) {
                                 "TREK STREAM: belum terdeteksi"
                             } else {
-                                "TREK STREAM\n$details"
+                                "DIAGNOSIS STREAM\n$details"
                             }
 
                             android.util.Log.d("IONTVPlayer", "Tracks:\n$details")
