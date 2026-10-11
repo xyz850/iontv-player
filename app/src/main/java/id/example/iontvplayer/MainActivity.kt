@@ -13,6 +13,7 @@ import android.view.WindowManager
 import android.widget.*
 import android.text.InputType
 import androidx.core.view.setPadding
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -37,6 +38,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var root: LinearLayout
     private lateinit var scroll: ScrollView
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var fullscreenContainer: FrameLayout
     private lateinit var resolutionSpinner: Spinner
     private lateinit var orientationSpinner: Spinner
@@ -51,6 +53,9 @@ class MainActivity : Activity() {
     }
 
     private var fullscreen = false
+    private var fullscreenOriginalParent: ViewGroup? = null
+    private var fullscreenOriginalIndex = -1
+    private var fullscreenOriginalLayoutParams: ViewGroup.LayoutParams? = null
     private var videoOptions: List<VideoOption> = emptyList()
     private var updatingResolution = false
     private var previousScreenBrightness = -1f
@@ -283,23 +288,23 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
             }
-            column.addView(TextView(this).apply {
-                text = label
-                textSize = 11f
-                setTextColor(white)
-            })
+            if (label.isNotBlank()) {
+                column.addView(TextView(this).apply {
+                    text = label
+                    textSize = 10f
+                    setTextColor(white)
+                })
+            }
             column.addView(spinner, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
             ))
             controlsRow.addView(column, LinearLayout.LayoutParams(
-                dp(width), dp(58)
+                dp(width), dp(44)
             ))
         }
 
         orientationSpinner = Spinner(this).apply {
-            adapter = ArrayAdapter(
-                this@MainActivity,
-                android.R.layout.simple_spinner_dropdown_item,
+            adapter = compactSpinnerAdapter(
                 listOf("Otomatis", "Potret", "Lanskap")
             )
             onItemSelectedListener =
@@ -316,9 +321,7 @@ class MainActivity : Activity() {
         addSpinnerControl("", orientationSpinner, 100)
 
         val sizeSpinner = Spinner(this).apply {
-            adapter = ArrayAdapter(
-                this@MainActivity,
-                android.R.layout.simple_spinner_dropdown_item,
+            adapter = compactSpinnerAdapter(
                 listOf("Fit", "Fill", "Zoom")
             )
             onItemSelectedListener =
@@ -339,11 +342,7 @@ class MainActivity : Activity() {
         addSpinnerControl("", sizeSpinner, 90)
 
         resolutionSpinner = Spinner(this).apply {
-            adapter = ArrayAdapter(
-                this@MainActivity,
-                android.R.layout.simple_spinner_dropdown_item,
-                listOf("Otomatis")
-            )
+            adapter = compactSpinnerAdapter(listOf("Otomatis"))
             onItemSelectedListener =
                 object : AdapterView.OnItemSelectedListener {
                     override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -375,17 +374,12 @@ class MainActivity : Activity() {
                     }
                 }
         }
-        addSpinnerControl("Resolusi video", resolutionSpinner, 132)
+        addSpinnerControl("", resolutionSpinner, 104)
 
         val brightnessColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
         }
-        brightnessColumn.addView(TextView(this).apply {
-            text = "Kecerahan"
-            textSize = 11f
-            setTextColor(white)
-        })
         brightnessBar = SeekBar(this).apply {
             max = 100
             progress = 100
@@ -404,10 +398,10 @@ class MainActivity : Activity() {
             })
         }
         brightnessColumn.addView(brightnessBar, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
         ))
         controlsRow.addView(brightnessColumn, LinearLayout.LayoutParams(
-            dp(140), dp(58)
+            dp(112), dp(44)
         ))
 
         urlInput = field("URL playlist atau stream", "https://bit.ly/KPL203")
@@ -543,6 +537,39 @@ class MainActivity : Activity() {
             isFillViewport = true
             addView(channelContent)
         }
+
+        swipeRefreshLayout = SwipeRefreshLayout(this).apply {
+            setColorSchemeColors(accent)
+            addView(
+                scroll,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+            setOnRefreshListener {
+                val url = (loadedPlaylistUrl
+                    ?: urlInput.text.toString()).trim()
+
+                if (url.isBlank()) {
+                    isRefreshing = false
+                    status.text = "Playlist belum tersedia."
+                } else {
+                    val headers = linkedMapOf<String, String>()
+                    refererInput.text.toString().trim()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { headers["Referer"] = it }
+                    originInput.text.toString().trim()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { headers["Origin"] = it }
+                    uaInput.text.toString().trim()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { headers["User-Agent"] = it }
+
+                    loadPlaylist(url, headers)
+                }
+            }
+        }
         val landscapeLayout =
             resources.configuration.orientation ==
                 android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -568,7 +595,7 @@ class MainActivity : Activity() {
                 )
             )
             channelSide.addView(
-                scroll,
+                swipeRefreshLayout,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
                 )
@@ -601,7 +628,7 @@ class MainActivity : Activity() {
                 )
             )
             mainContent.addView(
-                scroll,
+                swipeRefreshLayout,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
                 )
@@ -861,10 +888,15 @@ class MainActivity : Activity() {
             fullscreen = true
             previousScreenBrightness = window.attributes.screenBrightness
 
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-
             val parent = videoContainer.parent as? ViewGroup
-            parent?.removeView(videoContainer)
+            if (parent != null) {
+                fullscreenOriginalParent = parent
+                fullscreenOriginalIndex = parent.indexOfChild(videoContainer)
+                fullscreenOriginalLayoutParams = videoContainer.layoutParams
+                parent.removeView(videoContainer)
+            }
+
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
             fullscreenContainer = FrameLayout(this).apply {
                 setBackgroundColor(Color.BLACK)
@@ -912,46 +944,58 @@ class MainActivity : Activity() {
 
             (fullscreenContainer.parent as? ViewGroup)
                 ?.removeView(fullscreenContainer)
-
             fullscreenContainer.removeView(videoContainer)
 
-            val landscapeLayout =
-                orientationSpinner.selectedItemPosition == 2 ||
-                (orientationSpinner.selectedItemPosition == 0 &&
-                    resources.configuration.orientation ==
-                        android.content.res.Configuration.ORIENTATION_LANDSCAPE)
-
-            val videoParams = if (landscapeLayout) {
-                LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.MATCH_PARENT, 0.58f
+            val parent = fullscreenOriginalParent
+            val originalParams = fullscreenOriginalLayoutParams
+            if (parent != null && originalParams != null) {
+                val index = fullscreenOriginalIndex.coerceIn(
+                    0, parent.childCount
                 )
-            } else {
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
-                ).apply {
-                    bottomMargin = dp(8)
-                }
+                parent.addView(videoContainer, index, originalParams)
             }
 
-            val mainContent = root.getChildAt(0) as? LinearLayout
-            if (mainContent != null) {
-                mainContent.addView(
-                    videoContainer,
-                    if (landscapeLayout) 1 else 0,
-                    videoParams
-                )
+            fullscreenOriginalParent = null
+            fullscreenOriginalIndex = -1
+            fullscreenOriginalLayoutParams = null
 
-                // Pastikan PlayerView tersambung kembali ke player
-                // setelah videoContainer dipindahkan dari overlay fullscreen.
-                playerView.player = player
-                videoContainer.requestLayout()
-                playerView.requestLayout()
-                mainContent.requestLayout()
-            }
+            playerView.player = player
+            videoContainer.requestLayout()
+            playerView.requestLayout()
+            root.requestLayout()
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             root.setPadding(dp(16))
             applyOrientation(orientationSpinner.selectedItemPosition)
+        }
+    }
+
+    private fun compactSpinnerAdapter(
+        items: List<String>
+    ): ArrayAdapter<String> {
+        return object : ArrayAdapter<String>(
+            this,
+            android.R.layout.simple_spinner_item,
+            items
+        ) {
+            override fun getView(
+                position: Int,
+                convertView: View?,
+                parent: ViewGroup
+            ): View {
+                return super.getView(position, convertView, parent).apply {
+                    (this as? TextView)?.apply {
+                        textSize = 10f
+                        maxLines = 1
+                        setTextColor(Color.WHITE)
+                        setPadding(dp(4), 0, dp(2), 0)
+                    }
+                }
+            }
+        }.apply {
+            setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item
+            )
         }
     }
 
@@ -1116,6 +1160,7 @@ class MainActivity : Activity() {
                 val channels = parsePlaylist(text, finalUrl)
 
                 runOnUiThread {
+                    swipeRefreshLayout.isRefreshing = false
                     if (channels.isEmpty()) {
                         loadedPlaylistUrl = null
                         playlistChannels = emptyList()
@@ -1137,6 +1182,7 @@ class MainActivity : Activity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    swipeRefreshLayout.isRefreshing = false
                     status.text =
                         "Gagal membaca playlist: ${e.message ?: "koneksi atau format tidak valid"}"
                 }
