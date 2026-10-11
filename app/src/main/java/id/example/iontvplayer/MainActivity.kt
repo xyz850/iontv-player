@@ -212,10 +212,33 @@ class MainActivity : Activity() {
         val settingsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(panel)
-            setPadding(dp(12))
+            setPadding(dp(8))
         }
 
-        // Tombol pengaturan dipindahkan ke kontrol di area video.
+        val controlsScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+        }
+        val controlsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        controlsScroll.addView(controlsRow)
+        settingsPanel.addView(controlsScroll)
+
+        fun addControl(view: View, width: Int) {
+            val column = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(3), 0, dp(3), 0)
+            }
+            column.addView(view, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
+            ))
+            controlsRow.addView(column, LinearLayout.LayoutParams(
+                dp(width), dp(56)
+            ))
+        }
+
         val videoSettingsButton = Button(this).apply {
             text = "⚙"
             contentDescription = "Pengaturan layar dan video"
@@ -223,134 +246,161 @@ class MainActivity : Activity() {
             setTextColor(accent)
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             stateListAnimator = null
-            setPadding(0, 0, 0, 0)
             minWidth = 0
             minHeight = 0
             setOnClickListener {
-                settingsPanel.visibility =
-                    if (settingsPanel.visibility == View.VISIBLE) View.GONE
+                sourcePanel.visibility =
+                    if (sourcePanel.visibility == View.VISIBLE) View.GONE
                     else View.VISIBLE
             }
         }
 
-        videoContainer.addView(
-            videoSettingsButton,
-            FrameLayout.LayoutParams(
-                dp(52), dp(48), Gravity.BOTTOM or Gravity.END
-            )
-        )
-
-        val settingsTitle = TextView(this).apply {
-            text = "PENGATURAN LAYAR"
-            setTextColor(accent)
-            textSize = 14f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(0, dp(4), 0, dp(4))
-        }
-        settingsPanel.addView(settingsTitle)
-
         val fullButton = Button(this).apply {
-            text = "⛶ LAYAR PENUH"
+            text = "⛶"
+            contentDescription = "Layar penuh"
+            textSize = 22f
             setOnClickListener { toggleFullscreen() }
         }
-        // Tombol layar penuh dipasang pada kontrol tetap di bawah.
+        addControl(fullButton, 60)
 
         val exitButton = Button(this).apply {
             text = "EXIT"
             contentDescription = "Keluar dari aplikasi"
             setOnClickListener { finish() }
         }
-        settingsPanel.addView(exitButton)
+        addControl(exitButton, 72)
 
-        orientationSpinner = addLabeledSpinner(
-            settingsPanel,
-            "Orientasi",
-            listOf("Otomatis", "Potret", "Lanskap")
-        ) { position ->
-            if (!fullscreen) applyOrientation(position)
-        }
-
-        addLabeledSpinner(
-            settingsPanel,
-            "Ukuran video",
-            listOf("Fit", "Fill", "Zoom")
-        ) { position ->
-            playerView.resizeMode = when (position) {
-                1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+        fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
+            val column = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
             }
+            column.addView(TextView(this).apply {
+                text = label
+                textSize = 11f
+                setTextColor(white)
+            })
+            column.addView(spinner, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
+            ))
+            controlsRow.addView(column, LinearLayout.LayoutParams(
+                dp(width), dp(58)
+            ))
         }
 
-        resolutionSpinner = Spinner(this)
-        resolutionSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            listOf("Resolusi: otomatis")
-        )
-        resolutionSpinner.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    if (updatingResolution) return
-                    if (position == 0) {
-                        player?.trackSelectionParameters =
-                            player!!.trackSelectionParameters.buildUpon()
-                                .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-                                .build()
-                    } else {
-                        val option = videoOptions.getOrNull(position - 1)
-                            ?: return
-                        val exo = player ?: return
-                        exo.trackSelectionParameters =
-                            exo.trackSelectionParameters.buildUpon()
-                                .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-                                .addOverride(
-                                    TrackSelectionOverride(
-                                        option.group.mediaTrackGroup,
-                                        listOf(option.trackIndex)
-                                    )
-                                )
-                                .build()
+        orientationSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("Otomatis", "Potret", "Lanskap")
+            )
+            onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?, view: View?,
+                        position: Int, id: Long
+                    ) {
+                        if (!fullscreen) applyOrientation(position)
                     }
                 }
-            }
-        addLabeledView(settingsPanel, "Resolusi video", resolutionSpinner)
-
-        val brightnessLabel = TextView(this).apply {
-            text = "Kecerahan layar"
-            setTextColor(white)
-            textSize = 13f
         }
-        settingsPanel.addView(brightnessLabel)
+        addSpinnerControl("Orientasi", orientationSpinner, 125)
 
+        val sizeSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("Fit", "Fill", "Zoom")
+            )
+            onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?, view: View?,
+                        position: Int, id: Long
+                    ) {
+                        playerView.resizeMode = when (position) {
+                            1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                            2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+                    }
+                }
+        }
+        addSpinnerControl("Ukuran video", sizeSpinner, 112)
+
+        resolutionSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("Otomatis")
+            )
+            onItemSelectedListener =
+                object : AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?, view: View?,
+                        position: Int, id: Long
+                    ) {
+                        if (updatingResolution) return
+                        val exo = player ?: return
+                        if (position == 0) {
+                            exo.trackSelectionParameters =
+                                exo.trackSelectionParameters.buildUpon()
+                                    .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                                    .build()
+                        } else {
+                            val option = videoOptions.getOrNull(position - 1)
+                                ?: return
+                            exo.trackSelectionParameters =
+                                exo.trackSelectionParameters.buildUpon()
+                                    .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                                    .addOverride(
+                                        TrackSelectionOverride(
+                                            option.group.mediaTrackGroup,
+                                            listOf(option.trackIndex)
+                                        )
+                                    )
+                                    .build()
+                        }
+                    }
+                }
+        }
+        addSpinnerControl("Resolusi video", resolutionSpinner, 132)
+
+        val brightnessColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        brightnessColumn.addView(TextView(this).apply {
+            text = "Kecerahan"
+            textSize = 11f
+            setTextColor(white)
+        })
         brightnessBar = SeekBar(this).apply {
             max = 100
             progress = 100
             setOnSeekBarChangeListener(object :
                 SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(
-                    seekBar: SeekBar?,
-                    progress: Int,
-                    fromUser: Boolean
+                    seekBar: SeekBar?, progress: Int, fromUser: Boolean
                 ) {
                     val attributes = window.attributes
                     attributes.screenBrightness =
                         if (progress == 0) 0.01f else progress / 100f
                     window.attributes = attributes
                 }
-
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
             })
         }
-        settingsPanel.addView(brightnessBar)
+        brightnessColumn.addView(brightnessBar, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(42)
+        ))
+        controlsRow.addView(brightnessColumn, LinearLayout.LayoutParams(
+            dp(140), dp(58)
+        ))
 
         urlInput = field("URL playlist atau stream", "https://bit.ly/KPL203")
         refererInput = field("Referer (opsional)", "")
@@ -411,7 +461,7 @@ class MainActivity : Activity() {
         buttons.addView(stop, LinearLayout.LayoutParams(0, dp(50), 1f))
         sourcePanel.addView(buttons)
 
-        settingsPanel.visibility = View.GONE
+        settingsPanel.visibility = View.VISIBLE
 
         val channelContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -532,26 +582,6 @@ class MainActivity : Activity() {
             mainContent,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
-            )
-        )
-
-        // Tombol tetap, tidak ikut bergulir bersama daftar channel.
-        val fixedControls = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(4), dp(8), dp(4))
-        }
-        fixedControls.addView(
-            fullButton,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
-            )
-        )
-        root.addView(
-            fixedControls,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
             )
         )
 
