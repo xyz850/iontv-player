@@ -54,6 +54,8 @@ class MainActivity : Activity() {
     }
 
     private var fullscreen = false
+    private var fullscreenPreviousLayoutOrientation =
+        android.content.res.Configuration.ORIENTATION_PORTRAIT
     private var fullscreenOriginalParent: ViewGroup? = null
     private var fullscreenOriginalIndex = -1
     private var fullscreenOriginalLayoutParams: ViewGroup.LayoutParams? = null
@@ -908,32 +910,31 @@ class MainActivity : Activity() {
 
     private fun toggleFullscreen() {
         if (!fullscreen) {
-            fullscreen = true
-            previousScreenBrightness = window.attributes.screenBrightness
-
             val parent = videoContainer.parent as? ViewGroup
-            if (parent != null) {
-                fullscreenOriginalParent = parent
-                fullscreenOriginalIndex = parent.indexOfChild(videoContainer)
-                fullscreenOriginalLayoutParams = videoContainer.layoutParams
-                parent.removeView(videoContainer)
+            if (parent == null) {
+                status.text = "Tidak dapat membuka layar penuh."
+                return
             }
 
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            fullscreenOriginalParent = parent
+            fullscreenOriginalIndex = parent.indexOfChild(videoContainer)
+            fullscreenOriginalLayoutParams = videoContainer.layoutParams
+            previousScreenBrightness = window.attributes.screenBrightness
+            fullscreenPreviousLayoutOrientation =
+                resources.configuration.orientation
+
+            parent.removeView(videoContainer)
 
             fullscreenContainer = FrameLayout(this).apply {
                 setBackgroundColor(Color.BLACK)
-                addView(
-                    videoContainer,
-                    FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        Gravity.CENTER
-                    )
-                )
+                addView(videoContainer, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    Gravity.CENTER
+                ))
             }
 
-            val exitFullscreenButton = Button(this).apply {
+            val exitButton = Button(this).apply {
                 text = "✕"
                 contentDescription = "Keluar dari layar penuh"
                 textSize = 16f
@@ -943,12 +944,9 @@ class MainActivity : Activity() {
                 setOnClickListener { toggleFullscreen() }
             }
 
-            fullscreenContainer.addView(
-                exitFullscreenButton,
-                FrameLayout.LayoutParams(
-                    dp(36), dp(36), Gravity.TOP or Gravity.END
-                )
-            )
+            fullscreenContainer.addView(exitButton, FrameLayout.LayoutParams(
+                dp(36), dp(36), Gravity.TOP or Gravity.END
+            ))
 
             (window.decorView as ViewGroup).addView(
                 fullscreenContainer,
@@ -958,38 +956,66 @@ class MainActivity : Activity() {
                 )
             )
 
+            fullscreen = true
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         } else {
-            fullscreen = false
-
-            (fullscreenContainer.parent as? ViewGroup)
-                ?.removeView(fullscreenContainer)
-            fullscreenContainer.removeView(videoContainer)
-
             val parent = fullscreenOriginalParent
-            val originalParams = fullscreenOriginalLayoutParams
-            if (parent != null && originalParams != null) {
+            val params = fullscreenOriginalLayoutParams
+            val overlay = fullscreenContainer
+
+            if (parent == null || params == null) {
+                status.text = "Induk video tidak tersedia; fullscreen dipertahankan."
+                return
+            }
+
+            // Pindahkan video kembali sebelum melepas overlay.
+            (videoContainer.parent as? ViewGroup)?.removeView(videoContainer)
+
+            try {
                 val index = fullscreenOriginalIndex.coerceIn(
                     0, parent.childCount
                 )
-                parent.addView(videoContainer, index, originalParams)
+                parent.addView(videoContainer, index, params)
+            } catch (e: Exception) {
+                overlay.addView(videoContainer, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    Gravity.CENTER
+                ))
+                status.text = "Gagal memulihkan video."
+                return
             }
 
+            (overlay.parent as? ViewGroup)?.removeView(overlay)
+
+            fullscreen = false
             fullscreenOriginalParent = null
             fullscreenOriginalIndex = -1
             fullscreenOriginalLayoutParams = null
 
-            playerView.player = player
+            videoContainer.visibility = View.VISIBLE
+            playerView.visibility = View.VISIBLE
+            parent.visibility = View.VISIBLE
+            parent.requestLayout()
             videoContainer.requestLayout()
             playerView.requestLayout()
             root.requestLayout()
+            root.invalidate()
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             root.setPadding(dp(16))
-            applyOrientation(orientationSpinner.selectedItemPosition)
+            requestedOrientation = if (
+                fullscreenPreviousLayoutOrientation ==
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            ) {
+                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
         }
     }
 
