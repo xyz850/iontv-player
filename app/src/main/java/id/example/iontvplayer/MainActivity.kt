@@ -36,6 +36,7 @@ class MainActivity : Activity() {
     private lateinit var originInput: EditText
     private lateinit var uaInput: EditText
     private lateinit var status: TextView
+    private lateinit var diagnosticStatus: TextView
     private lateinit var root: LinearLayout
     private lateinit var scroll: ScrollView
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
@@ -523,6 +524,14 @@ class MainActivity : Activity() {
         }
         channelContent.addView(status)
 
+        diagnosticStatus = TextView(this).apply {
+            text = "Diagnosis: pilih channel untuk mulai."
+            textSize = 11f
+            setTextColor(Color.WHITE)
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            setBackgroundColor(Color.rgb(38, 42, 50))
+        }
+
         val hint = TextView(this).apply {
             text = "Resolusi bergantung pada stream. DRM memerlukan konfigurasi dan lisensi dari penyedia."
             textSize = 11f
@@ -595,6 +604,13 @@ class MainActivity : Activity() {
                 )
             )
             channelSide.addView(
+                diagnosticStatus,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            channelSide.addView(
                 swipeRefreshLayout,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
@@ -619,6 +635,13 @@ class MainActivity : Activity() {
                 ).apply {
                     bottomMargin = dp(4)
                 }
+            )
+            mainContent.addView(
+                diagnosticStatus,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
             )
             mainContent.addView(
                 settingsPanel,
@@ -1441,12 +1464,12 @@ class MainActivity : Activity() {
                                     "$kind mime=${f.sampleMimeType ?: "?"} codec=${f.codecs ?: "?"} ukuran=${f.width}x${f.height} dipilih=${g.isTrackSelected(i)} didukung=${g.isTrackSupported(i)}"
                                 }
                             }.take(8).joinToString("\n")
-                            status.text = "Track:\n$details"
+                            diagnosticStatus.text = "Track:\n$details"
                             android.util.Log.d("IONTVPlayer", "Tracks:\n$details")
                         }
 
                         override fun onRenderedFirstFrame() {
-                            status.text = "Gambar berhasil ditampilkan."
+                            diagnosticStatus.text = "Gambar berhasil ditampilkan."
                             android.util.Log.d(
                                 "IONTVPlayer",
                                 "FIRST_FRAME_RENDERED"
@@ -1470,7 +1493,7 @@ class MainActivity : Activity() {
                                 e = e.cause
                             }
                             val detail = causes.joinToString("\n")
-                            status.text = "GAGAL ${error.errorCodeName} (${error.errorCode})\n$detail"
+                            diagnosticStatus.text = "GAGAL ${error.errorCodeName} (${error.errorCode})\n$detail"
                             android.util.Log.e("IONTVPlayer", "Playback error:\n$detail", error)
                         }
                     })
