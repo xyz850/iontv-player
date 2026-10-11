@@ -1135,12 +1135,10 @@ class MainActivity : Activity() {
                 )
             )
 
-            // Pilihan ukuran video vertikal, minimalis dan tanpa background.
-            // Fill memakai mode responsif FIT agar gambar tidak terpotong.
-            // Posisi pilihan dipisahkan dari mode render agar Fill tetap tersorot.
+            // Menu ukuran video: satu ikon untuk membuka/tutup pilihan.
             val sizeModes = listOf(
                 Triple(
-                    "fit",
+                    "Fit",
                     androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
                     0
                 ),
@@ -1150,7 +1148,7 @@ class MainActivity : Activity() {
                     1
                 ),
                 Triple(
-                    "zoom",
+                    "Zoom",
                     androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                     2
                 )
@@ -1161,9 +1159,10 @@ class MainActivity : Activity() {
             val sizeSelector = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(0, dp(3), 0, dp(3))
-                setBackgroundColor(Color.TRANSPARENT)
-                elevation = 0f
+                setPadding(dp(3), dp(3), dp(3), dp(3))
+                setBackgroundColor(Color.argb(210, 18, 18, 18))
+                elevation = dp(4).toFloat()
+                visibility = View.GONE
             }
 
             fun updateSizeSelection(selectedPosition: Int) {
@@ -1171,9 +1170,9 @@ class MainActivity : Activity() {
                     val selected = position == selectedPosition
                     label.setTextColor(
                         if (selected) Color.WHITE
-                        else Color.argb(155, 255, 255, 255)
+                        else Color.argb(175, 255, 255, 255)
                     )
-                    label.alpha = if (selected) 1f else 0.72f
+                    label.alpha = if (selected) 1f else 0.78f
                     label.paint.isFakeBoldText = selected
                 }
             }
@@ -1188,10 +1187,11 @@ class MainActivity : Activity() {
                     minWidth = 0
                     minimumWidth = 0
                     minHeight = 0
-                    setPadding(dp(8), dp(5), dp(8), dp(5))
+                    setPadding(dp(12), dp(5), dp(12), dp(5))
                     contentDescription = "Ukuran video $labelText"
                     isClickable = true
                     isFocusable = true
+
                     setOnClickListener {
                         playerView.resizeMode = mode
 
@@ -1200,6 +1200,8 @@ class MainActivity : Activity() {
                         }
 
                         updateSizeSelection(position)
+                        sizeSelector.visibility = View.GONE
+                        scheduleControlsAutoHide()
                     }
                 }
 
@@ -1207,23 +1209,52 @@ class MainActivity : Activity() {
                 sizeSelector.addView(
                     label,
                     LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        dp(30)
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        dp(32)
                     )
                 )
             }
 
+            val sizeToggle = makeButton("▣", "Buka pilihan Fit, Fill, Zoom").apply {
+                textSize = 20f
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(0, 0, 0, 0)
+            }
+
             fullscreenControls.addView(
-                sizeSelector,
+                sizeToggle,
                 FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    dp(44),
+                    dp(40),
                     Gravity.END or Gravity.TOP
                 ).apply {
                     topMargin = dp(54)
                     rightMargin = dp(10)
                 }
             )
+
+            fullscreenControls.addView(
+                sizeSelector,
+                FrameLayout.LayoutParams(
+                    dp(76),
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.END or Gravity.TOP
+                ).apply {
+                    topMargin = dp(98)
+                    rightMargin = dp(10)
+                }
+            )
+
+            sizeToggle.setOnClickListener {
+                sizeSelector.visibility =
+                    if (sizeSelector.visibility == View.VISIBLE) {
+                        View.GONE
+                    } else {
+                        View.VISIBLE
+                    }
+                scheduleControlsAutoHide()
+            }
 
             updateSizeSelection(sizeSpinner.selectedItemPosition)
 
