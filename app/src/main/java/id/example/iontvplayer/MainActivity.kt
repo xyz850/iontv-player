@@ -1,5 +1,6 @@
 package id.example.iontvplayer
 import android.net.Uri
+import android.util.Base64
 
 import android.app.Activity
 import android.os.Bundle
@@ -23,6 +24,9 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
+import androidx.media3.exoplayer.drm.FrameworkMediaDrm
+import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -606,13 +610,6 @@ class MainActivity : Activity() {
                 )
             )
             channelSide.addView(
-                diagnosticStatus,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            )
-            channelSide.addView(
                 swipeRefreshLayout,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
@@ -637,13 +634,6 @@ class MainActivity : Activity() {
                 ).apply {
                     bottomMargin = dp(4)
                 }
-            )
-            mainContent.addView(
-                diagnosticStatus,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
             )
             mainContent.addView(
                 settingsPanel,
@@ -1314,13 +1304,13 @@ class MainActivity : Activity() {
 
                     when (key) {
                         "inputstream.adaptive.license_type" -> {
-                            pendingDrmScheme =
-                                if (value.equals("com.widevine.alpha", true) ||
-                                    value.equals("widevine", true)) {
-                                    "widevine"
-                                } else {
-                                    null
-                                }
+                            pendingDrmScheme = when {
+                                value.equals("com.widevine.alpha", true) ||
+                                    value.equals("widevine", true) -> "widevine"
+                                value.equals("clearkey", true) ||
+                                    value.equals("clear_key", true) -> "clearkey"
+                                else -> null
+                            }
                         }
 
                         "inputstream.adaptive.license_key" -> {
@@ -1329,13 +1319,18 @@ class MainActivity : Activity() {
                                 parts.firstOrNull()?.trim().orEmpty()
 
                             if (rawLicenseUrl.isNotEmpty()) {
-                                try {
-                                    pendingLicenseUrl = java.net.URL(
-                                        java.net.URL(baseUrl),
-                                        rawLicenseUrl
-                                    ).toString()
-                                } catch (_: Exception) {
+                                if (pendingDrmScheme == "clearkey" &&
+                                    isInlineClearKeyValue(rawLicenseUrl)) {
                                     pendingLicenseUrl = rawLicenseUrl
+                                } else {
+                                    try {
+                                        pendingLicenseUrl = java.net.URL(
+                                            java.net.URL(baseUrl),
+                                            rawLicenseUrl
+                                        ).toString()
+                                    } catch (_: Exception) {
+                                        pendingLicenseUrl = rawLicenseUrl
+                                    }
                                 }
                             }
 
@@ -1401,6 +1396,42 @@ class MainActivity : Activity() {
         return result
     }
 
+    private fun isInlineClearKeyValue(value: String): Boolean {
+        val raw = value.trim()
+        return Regex("""(?i)^[0-9a-f]{32}:[0-9a-f]{32}$""")
+            .matches(raw) ||
+            (raw.startsWith("{") &&
+                raw.contains("\"keys\"", ignoreCase = true))
+    }
+
+    private fun buildClearKeyResponse(value: String?): String? {
+        val raw = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+
+        // JSON respons ClearKey yang sudah disediakan sumber.
+        if (raw.startsWith("{") &&
+            raw.contains("\"keys\"", ignoreCase = true)) {
+            return raw
+        }
+
+        // Format lokal KID:KEY, keduanya 16 byte dalam bentuk heksadesimal.
+        val match = Regex("""(?i)^([0-9a-f]{32}):([0-9a-f]{32})$""")
+            .matchEntire(raw) ?: return null
+
+        fun hexToBytes(hex: String): ByteArray =
+            hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+        fun base64Url(bytes: ByteArray): String =
+            Base64.encodeToString(
+                bytes,
+                Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+            )
+
+        val kid = base64Url(hexToBytes(match.groupValues[1]))
+        val key = base64Url(hexToBytes(match.groupValues[2]))
+
+        return """{"keys":[{"kty":"oct","kid":"$kid","k":"$key"}],"type":"temporary"}"""
+    }
+
     private fun playMedia(
         url: String,
         headers: Map<String, String>,
@@ -1421,15 +1452,53 @@ class MainActivity : Activity() {
                 .setAllowCrossProtocolRedirects(true)
                 .setDefaultRequestProperties(headers)
 
+            val inlineClearKeyResponse =
+                if (drmScheme == "clearkey") {
+                    buildClearKeyResponse(drmLicenseUrl)
+                } else {
+                    null
+                }
+
+            if (drmScheme == "clearkey" &&
+                inlineClearKeyResponse == null) {
+                val license = drmLicenseUrl
+                if (license.isNullOrBlank() ||
+                    !(license.startsWith("https://", true) ||
+                      license.startsWith("http://", true))) {
+                    throw IllegalArgumentException(
+                        "ClearKey harus memakai URL lisensi atau format KID:KEY yang didukung."
+                    )
+                }
+            }
+
+            val mediaSourceFactory =
+                DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(httpFactory)
+
+            if (inlineClearKeyResponse != null) {
+                val clearKeyManager =
+                    DefaultDrmSessionManager.Builder()
+                        .setUuidAndExoMediaDrmProvider(
+                            C.CLEARKEY_UUID,
+                            FrameworkMediaDrm.DEFAULT_PROVIDER
+                        )
+                        .build(
+                            LocalMediaDrmCallback(
+                                inlineClearKeyResponse.toByteArray(Charsets.UTF_8)
+                            )
+                        )
+
+                mediaSourceFactory.setDrmSessionManagerProvider {
+                    _ -> clearKeyManager
+                }
+            }
+
             player = ExoPlayer.Builder(
                 this,
                 androidx.media3.exoplayer.DefaultRenderersFactory(this)
                     .setEnableDecoderFallback(true)
             )
-                .setMediaSourceFactory(
-                    DefaultMediaSourceFactory(this)
-                        .setDataSourceFactory(httpFactory)
-                )
+                .setMediaSourceFactory(mediaSourceFactory)
                 .build()
                 .also { exo ->
                     playerView.player = exo
@@ -1443,26 +1512,41 @@ class MainActivity : Activity() {
                             itemBuilder.setMimeType(MimeTypes.APPLICATION_MPD)
                     }
 
-                    if (drmScheme == "widevine") {
-                        val license = drmLicenseUrl
-                        if (license.isNullOrBlank()) {
-                            throw IllegalArgumentException(
-                                "Channel Widevine tidak memiliki URL lisensi."
-                            )
-                        }
-                        if (!license.startsWith("https://", ignoreCase = true)) {
-                            throw IllegalArgumentException(
-                                "URL lisensi Widevine harus menggunakan HTTPS."
-                            )
+                    when (drmScheme) {
+                        "widevine" -> {
+                            val license = drmLicenseUrl
+                            if (license.isNullOrBlank()) {
+                                throw IllegalArgumentException(
+                                    "Channel Widevine tidak memiliki URL lisensi."
+                                )
+                            }
+                            if (!license.startsWith("https://", ignoreCase = true)) {
+                                throw IllegalArgumentException(
+                                    "URL lisensi Widevine harus menggunakan HTTPS."
+                                )
+                            }
+
+                            val drmConfiguration =
+                                MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                                    .setLicenseUri(Uri.parse(license))
+                                    .setLicenseRequestHeaders(drmLicenseHeaders)
+                                    .build()
+
+                            itemBuilder.setDrmConfiguration(drmConfiguration)
                         }
 
-                        val drmConfiguration =
-                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
-                                .setLicenseUri(Uri.parse(license))
-                                .setLicenseRequestHeaders(drmLicenseHeaders)
-                                .build()
+                        "clearkey" -> {
+                            val drmBuilder =
+                                MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
 
-                        itemBuilder.setDrmConfiguration(drmConfiguration)
+                            if (inlineClearKeyResponse == null) {
+                                drmBuilder
+                                    .setLicenseUri(Uri.parse(drmLicenseUrl!!))
+                                    .setLicenseRequestHeaders(drmLicenseHeaders)
+                            }
+
+                            itemBuilder.setDrmConfiguration(drmBuilder.build())
+                        }
                     }
 
                     exo.setMediaItem(itemBuilder.build())
