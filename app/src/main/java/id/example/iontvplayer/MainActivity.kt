@@ -266,8 +266,16 @@ class MainActivity : Activity() {
         }
         addControl(fullButton, 44)
 
-        val exitButton = Button(this).apply {
-            styleIconButton(this, "⏻", "Keluar dari aplikasi")
+        val exitButton = android.widget.ImageButton(this).apply {
+            setImageResource(R.drawable.ic_power)
+            imageTintList = null
+            contentDescription = "Keluar dari aplikasi"
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(0, 0, 0, 0)
+            stateListAnimator = null
+            minWidth = 0
+            minHeight = 0
             setOnClickListener { finish() }
         }
         addControl(exitButton, 44)
