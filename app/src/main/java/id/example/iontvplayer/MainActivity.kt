@@ -253,7 +253,7 @@ class MainActivity : Activity() {
             text = "⛶ LAYAR PENUH"
             setOnClickListener { toggleFullscreen() }
         }
-        settingsPanel.addView(fullButton)
+        // Tombol layar penuh dipasang pada kontrol tetap di bawah.
 
         val exitButton = Button(this).apply {
             text = "EXIT"
@@ -363,7 +363,7 @@ class MainActivity : Activity() {
         val sourcePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(4), 0, dp(4))
-            visibility = View.VISIBLE
+            visibility = View.GONE
         }
 
         // Sumber dan playlist tetap tersedia tanpa tombol lipat.
@@ -534,6 +534,27 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
             )
         )
+
+        // Tombol tetap, tidak ikut bergulir bersama daftar channel.
+        val fixedControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+        }
+        fixedControls.addView(
+            fullButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)
+            )
+        )
+        root.addView(
+            fixedControls,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         setContentView(root)
 
         // Simpan URL setiap kali pengguna mengubah kolom playlist.
@@ -835,8 +856,10 @@ class MainActivity : Activity() {
             fullscreenContainer.removeView(videoContainer)
 
             val landscapeLayout =
-                resources.configuration.orientation ==
-                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                orientationSpinner.selectedItemPosition == 2 ||
+                (orientationSpinner.selectedItemPosition == 0 &&
+                    resources.configuration.orientation ==
+                        android.content.res.Configuration.ORIENTATION_LANDSCAPE)
 
             val videoParams = if (landscapeLayout) {
                 LinearLayout.LayoutParams(
@@ -851,11 +874,20 @@ class MainActivity : Activity() {
             }
 
             val mainContent = root.getChildAt(0) as? LinearLayout
-            mainContent?.addView(
-                videoContainer,
-                if (landscapeLayout) 1 else 0,
-                videoParams
-            )
+            if (mainContent != null) {
+                mainContent.addView(
+                    videoContainer,
+                    if (landscapeLayout) 1 else 0,
+                    videoParams
+                )
+
+                // Pastikan PlayerView tersambung kembali ke player
+                // setelah videoContainer dipindahkan dari overlay fullscreen.
+                playerView.player = player
+                videoContainer.requestLayout()
+                playerView.requestLayout()
+                mainContent.requestLayout()
+            }
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             root.setPadding(dp(16))
