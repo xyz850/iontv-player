@@ -342,7 +342,8 @@ class MainActivity : Activity() {
                         position: Int, id: Long
                     ) {
                         playerView.resizeMode = when (position) {
-                            1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                            // Tombol Fill menjalankan mode responsif agar gambar utuh.
+                            1 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                             2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                             else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                         }
