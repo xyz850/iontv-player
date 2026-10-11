@@ -4,6 +4,8 @@ import android.util.Base64
 
 import android.app.Activity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.graphics.Color
 import android.graphics.BitmapFactory
 import android.content.pm.ActivityInfo
@@ -59,6 +61,10 @@ class MainActivity : Activity() {
     }
 
     private var fullscreen = false
+    private val controlsHandler = Handler(Looper.getMainLooper())
+    private var hideControlsRunnable: Runnable? = null
+    private var settingsPanelView: View? = null
+    private var fullscreenControlsView: View? = null
     private var fullscreenPreviousRequestedOrientation =
         ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     private var fullscreenPreviousLayoutOrientation =
@@ -210,6 +216,7 @@ class MainActivity : Activity() {
 
         playerView = PlayerView(this).apply {
             useController = true
+            controllerShowTimeoutMs = 4000
             setBackgroundColor(Color.BLACK)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
@@ -227,15 +234,18 @@ class MainActivity : Activity() {
         val settingsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(panel)
-            setPadding(dp(8))
+            setPadding(dp(4))
         }
+        settingsPanelView = settingsPanel
 
         val controlsScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
+            clipToPadding = false
+            setPadding(dp(2), 0, dp(2), 0)
         }
         val controlsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER
         }
         controlsScroll.addView(controlsRow)
         settingsPanel.addView(controlsScroll)
@@ -672,6 +682,12 @@ class MainActivity : Activity() {
         )
 
         setContentView(root)
+        settingsPanelView?.let { keepControlsVisibleWhileTouching(it) }
+
+        playerView.setOnClickListener {
+            showPlaybackControls()
+        }
+        showPlaybackControls()
 
         // Simpan URL setiap kali pengguna mengubah kolom playlist.
         // Simpan header jaringan setiap kali nilainya berubah.
@@ -912,6 +928,55 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun scheduleControlsAutoHide() {
+        hideControlsRunnable?.let { controlsHandler.removeCallbacks(it) }
+
+        val task = Runnable {
+            if (fullscreen) {
+                fullscreenControlsView?.visibility = View.GONE
+            } else {
+                settingsPanelView?.visibility = View.GONE
+            }
+            if (::playerView.isInitialized) {
+                playerView.hideController()
+            }
+        }
+        hideControlsRunnable = task
+        controlsHandler.postDelayed(task, 4000L)
+    }
+
+    private fun showPlaybackControls() {
+        if (fullscreen) {
+            fullscreenControlsView?.visibility = View.VISIBLE
+        } else {
+            settingsPanelView?.visibility = View.VISIBLE
+        }
+
+        if (::playerView.isInitialized) {
+            playerView.showController()
+        }
+        scheduleControlsAutoHide()
+    }
+
+    private fun keepControlsVisibleWhileTouching(view: View) {
+        view.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN,
+                android.view.MotionEvent.ACTION_MOVE,
+                android.view.MotionEvent.ACTION_UP,
+                android.view.MotionEvent.ACTION_CANCEL ->
+                    scheduleControlsAutoHide()
+            }
+            false
+        }
+
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                keepControlsVisibleWhileTouching(view.getChildAt(i))
+            }
+        }
+    }
+
     private fun toggleFullscreen() {
         if (!fullscreen) {
             val parent = videoContainer.parent as? ViewGroup
@@ -940,6 +1005,11 @@ class MainActivity : Activity() {
                         Gravity.CENTER
                     )
                 )
+            }
+
+            // Semua kontrol fullscreen berada dalam satu lapisan.
+            val fullscreenControls = FrameLayout(this).apply {
+                setBackgroundColor(Color.TRANSPARENT)
             }
 
             // Bilah kontrol horizontal di bagian atas.
@@ -1056,7 +1126,7 @@ class MainActivity : Activity() {
                 exo.trackSelectionParameters = builder.build()
             }
 
-            fullscreenContainer.addView(
+            fullscreenControls.addView(
                 toolbar,
                 FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1143,7 +1213,7 @@ class MainActivity : Activity() {
                 )
             }
 
-            fullscreenContainer.addView(
+            fullscreenControls.addView(
                 sizeSelector,
                 FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1192,7 +1262,7 @@ class MainActivity : Activity() {
                 }
             )
 
-            fullscreenContainer.addView(
+            fullscreenControls.addView(
                 volumeSlider,
                 FrameLayout.LayoutParams(
                     dp(180), dp(40),
@@ -1206,7 +1276,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 contentDescription = "Volume"
             }
-            fullscreenContainer.addView(
+            fullscreenControls.addView(
                 volumeLabel,
                 FrameLayout.LayoutParams(
                     dp(44), dp(40),
@@ -1248,7 +1318,7 @@ class MainActivity : Activity() {
                 }
             )
 
-            fullscreenContainer.addView(
+            fullscreenControls.addView(
                 brightnessSlider,
                 FrameLayout.LayoutParams(
                     dp(180), dp(40),
@@ -1262,13 +1332,23 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 contentDescription = "Kecerahan"
             }
-            fullscreenContainer.addView(
+            fullscreenControls.addView(
                 brightnessLabel,
                 FrameLayout.LayoutParams(
                     dp(44), dp(40),
                     Gravity.END or Gravity.CENTER_VERTICAL
                 )
             )
+
+            fullscreenContainer.addView(
+                fullscreenControls,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+            fullscreenControlsView = fullscreenControls
+            keepControlsVisibleWhileTouching(fullscreenControls)
 
             val decor = window.decorView as ViewGroup
             decor.addView(
@@ -1282,11 +1362,13 @@ class MainActivity : Activity() {
             root.visibility = View.INVISIBLE
 
             fullscreen = true
+            settingsPanelView?.visibility = View.GONE
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            showPlaybackControls()
 
         } else {
             val parent = fullscreenOriginalParent
@@ -1325,6 +1407,7 @@ class MainActivity : Activity() {
             window.attributes = attrs
 
             fullscreen = false
+            fullscreenControlsView = null
             fullscreenOriginalParent = null
             fullscreenOriginalIndex = -1
             fullscreenOriginalLayoutParams = null
@@ -1341,6 +1424,7 @@ class MainActivity : Activity() {
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
             requestedOrientation = fullscreenPreviousRequestedOrientation
+            showPlaybackControls()
         }
     }
     private fun compactSpinnerAdapter(
