@@ -47,6 +47,7 @@ class MainActivity : Activity() {
     private lateinit var fullscreenContainer: FrameLayout
     private lateinit var resolutionSpinner: Spinner
     private lateinit var orientationSpinner: Spinner
+    private lateinit var sizeSpinner: Spinner
     private lateinit var brightnessBar: SeekBar
     private lateinit var channelSpinner: Spinner
     private lateinit var channelGrid: GridLayout
@@ -327,7 +328,7 @@ class MainActivity : Activity() {
         }
         addSpinnerControl("", orientationSpinner, 100)
 
-        val sizeSpinner = Spinner(this).apply {
+        sizeSpinner = Spinner(this).apply {
             adapter = compactSpinnerAdapter(
                 listOf("Fit", "Fill", "Zoom")
             )
@@ -342,6 +343,12 @@ class MainActivity : Activity() {
                             1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                             2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                             else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+
+                        // Fill membuka video dalam layar penuh.
+                        // Di fullscreen, pilihan ukuran tidak membuka ulang layar.
+                        if (position == 1 && !fullscreen) {
+                            toggleFullscreen()
                         }
                     }
                 }
@@ -1095,6 +1102,16 @@ class MainActivity : Activity() {
                     isFocusable = true
                     setOnClickListener {
                         playerView.resizeMode = mode
+
+                        // Sinkronkan spinner utama dengan tombol fullscreen.
+                        val selectedPosition =
+                            sizeModes.indexOfFirst { it.second == mode }
+                                .coerceAtLeast(0)
+
+                        if (sizeSpinner.selectedItemPosition != selectedPosition) {
+                            sizeSpinner.setSelection(selectedPosition)
+                        }
+
                         updateSizeSelection(mode)
                     }
                 }
@@ -1248,7 +1265,8 @@ class MainActivity : Activity() {
             root.visibility = View.INVISIBLE
 
             fullscreen = true
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            // Pertahankan orientasi aktif agar layout lama tidak tertinggal
+            // setelah fullscreen ditutup.
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
@@ -1306,14 +1324,7 @@ class MainActivity : Activity() {
             root.invalidate()
 
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            requestedOrientation = if (
-                fullscreenPreviousLayoutOrientation ==
-                    android.content.res.Configuration.ORIENTATION_LANDSCAPE
-            ) {
-                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            } else {
-                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            }
+            // Orientasi tidak diubah saat keluar fullscreen.
         }
     }
     private fun compactSpinnerAdapter(
