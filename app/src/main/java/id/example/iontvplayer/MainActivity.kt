@@ -511,9 +511,7 @@ class MainActivity : Activity() {
             visibility = View.GONE
         }
 
-        videoSettingsButton.visibility = View.GONE
         sourcePanel.visibility = View.GONE
-        videoSettingsButton.setOnClickListener { }
 
         // Sumber dan playlist tetap tersedia tanpa tombol lipat.
         settingsPanel.addView(sourcePanel)
