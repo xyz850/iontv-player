@@ -1430,6 +1430,38 @@ class MainActivity : Activity() {
 
                         override fun onTracksChanged(tracks: Tracks) {
                             updateVideoOptions(tracks)
+
+                            val videoGroups = tracks.groups.count {
+                                it.type == C.TRACK_TYPE_VIDEO
+                            }
+                            val audioGroups = tracks.groups.count {
+                                it.type == C.TRACK_TYPE_AUDIO
+                            }
+
+                            status.text =
+                                "Track terdeteksi — video: $videoGroups, audio: $audioGroups. Menunggu gambar…"
+
+                            android.util.Log.d(
+                                "IONTVPlayer",
+                                "Tracks: videoGroups=$videoGroups, audioGroups=$audioGroups"
+                            )
+                        }
+
+                        override fun onRenderedFirstFrame() {
+                            status.text = "Gambar berhasil ditampilkan."
+                            android.util.Log.d(
+                                "IONTVPlayer",
+                                "FIRST_FRAME_RENDERED"
+                            )
+                        }
+
+                        override fun onVideoSizeChanged(
+                            videoSize: androidx.media3.common.VideoSize
+                        ) {
+                            android.util.Log.d(
+                                "IONTVPlayer",
+                                "Video size: ${videoSize.width}x${videoSize.height}, rotation=${videoSize.unappliedRotationDegrees}"
+                            )
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
