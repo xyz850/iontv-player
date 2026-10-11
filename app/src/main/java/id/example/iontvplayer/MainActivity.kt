@@ -259,59 +259,116 @@ class MainActivity : Activity() {
             val column = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(1), 0, dp(1), 0)
+                setPadding(dp(2), 0, dp(2), 0)
             }
-            column.addView(view, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
-            ))
-            controlsRow.addView(column, LinearLayout.LayoutParams(
-                dp(width), dp(44)
-            ))
+            column.addView(
+                view,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
+                )
+            )
+            controlsRow.addView(
+                column,
+                LinearLayout.LayoutParams(dp(width), dp(44))
+            )
         }
 
-        fun styleIconButton(
-            button: Button,
+        fun addNeonControl(
             symbol: String,
-            description: String
+            label: String,
+            description: String,
+            action: () -> Unit
+        ): LinearLayout {
+            val control = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                isClickable = true
+                isFocusable = true
+                contentDescription = description
+                background =
+                    android.graphics.drawable.GradientDrawable().apply {
+                        setColor(Color.rgb(16, 22, 36))
+                        setStroke(dp(1), accent)
+                        cornerRadius = dp(7).toFloat()
+                    }
+                setOnClickListener { action() }
+            }
+
+            control.addView(
+                TextView(this).apply {
+                    text = symbol
+                    textSize = 16f
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                    setTextColor(accent)
+                },
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
+                )
+            )
+
+            control.addView(
+                TextView(this).apply {
+                    text = label
+                    textSize = 9f
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                    setTextColor(accent)
+                },
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(14)
+                )
+            )
+
+            addControl(control, 76)
+            return control
+        }
+
+        addNeonControl(
+            "⛶", "fullscreen", "Buka layar penuh"
         ) {
-            button.text = symbol
-            button.contentDescription = description
-            button.textSize = 21f
-            button.setTextColor(accent)
-            button.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            button.stateListAnimator = null
-            button.minWidth = 0
-            button.minHeight = 0
-            button.setPadding(0, 0, 0, 0)
+            toggleFullscreen()
         }
 
-        val videoSettingsButton = Button(this).apply {
-            styleIconButton(this, "⚙", "Buka atau tutup pengaturan sumber")
+        lateinit var sizeButton: LinearLayout
+        sizeButton = addNeonControl(
+            "▣", "ukuran", "Pilih ukuran video"
+        ) {
+            val popup = android.widget.PopupMenu(this, sizeButton)
+            listOf("Fit", "Fill", "Zoom").forEachIndexed { index, title ->
+                popup.menu.add(title).setOnMenuItemClickListener {
+                    sizeSpinner.setSelection(index)
+                    true
+                }
+            }
+            popup.show()
         }
-        addControl(videoSettingsButton, 44)
 
-        val fullButton = Button(this).apply {
-            styleIconButton(this, "⛶", "Layar penuh")
-            setOnClickListener { toggleFullscreen() }
+        addNeonControl(
+            "↻", "refresh", "Muat ulang stream saat ini"
+        ) {
+            val exo = player
+            if (exo != null && exo.currentMediaItem != null) {
+                status.text = "Memuat ulang stream..."
+                exo.seekToDefaultPosition()
+                exo.prepare()
+                exo.playWhenReady = true
+            } else {
+                playStream()
+            }
         }
-        addControl(fullButton, 44)
 
-        val exitButton = android.widget.ImageButton(this).apply {
-            setImageResource(R.drawable.ic_power)
-            imageTintList = android.content.res.ColorStateList.valueOf(accent)
-            contentDescription = "Keluar dari aplikasi"
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(0, 0, 0, 0)
-            stateListAnimator = null
-            setOnClickListener { finish() }
+        addNeonControl(
+            "⏻", "keluar", "Keluar dari aplikasi"
+        ) {
+            finish()
         }
-        addControl(exitButton, 44)
 
         fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
             val column = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
+                visibility = View.GONE
             }
             if (label.isNotBlank()) {
                 column.addView(TextView(this).apply {
@@ -375,7 +432,7 @@ class MainActivity : Activity() {
                     }
                 }
         }
-        addSpinnerControl("", sizeSpinner, 90)
+        sizeSpinner.visibility = View.GONE
 
         resolutionSpinner = Spinner(this).apply {
             adapter = compactSpinnerAdapter(listOf("Otomatis"))
