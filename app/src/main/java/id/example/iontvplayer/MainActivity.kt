@@ -274,8 +274,6 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(0, 0, 0, 0)
             stateListAnimator = null
-            minWidth = 0
-            minHeight = 0
             setOnClickListener { finish() }
         }
         addControl(exitButton, 44)
