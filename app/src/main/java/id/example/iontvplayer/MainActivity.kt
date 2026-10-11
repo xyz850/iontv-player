@@ -332,7 +332,7 @@ class MainActivity : Activity() {
 
         sizeSpinner = Spinner(this).apply {
             adapter = compactSpinnerAdapter(
-                listOf("Fit", "Fill", "Zoom")
+                listOf("Fit", "Responsive", "Zoom")
             )
             onItemSelectedListener =
                 object : AdapterView.OnItemSelectedListener {
@@ -1063,7 +1063,7 @@ class MainActivity : Activity() {
             // Pilihan ukuran video vertikal, minimalis dan tanpa background.
             val sizeModes = listOf(
                 "fit" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT,
-                "fill" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL,
+                "Responsive" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL,
                 "zoom" to androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             )
 
