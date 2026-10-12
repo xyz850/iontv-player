@@ -1135,13 +1135,10 @@ class MainActivity : Activity() {
             }
         }
 
-        // Kontrol tambahan tetap tersedia melalui panel pengaturan.
-        addControl(subtitleNeonButton, 40)
-        addControl(brightnessNeonButton, 40)
-
         // Toolbar Cyber Neon di dalam area video.
-        // Urutan kiri ke kanan: volume, fullscreen, ukuran,
-        // resolusi, dan pengaturan.
+        // Urutan kiri ke kanan: kecerahan, CC, volume,
+        // fullscreen, ukuran, resolusi.
+        // Roda gigi tetap berada paling kanan.
         fun placeVideoIcon(view: View, right: Int) {
             videoContainer.addView(
                 view,
@@ -1156,6 +1153,8 @@ class MainActivity : Activity() {
             )
         }
 
+        placeVideoIcon(brightnessNeonButton, 256)
+        placeVideoIcon(subtitleNeonButton, 216)
         placeVideoIcon(volumeNeonButton, 176)
         placeVideoIcon(fullscreenNeonButton, 136)
         placeVideoIcon(sizeNeonButton, 96)
