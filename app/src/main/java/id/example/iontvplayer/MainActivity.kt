@@ -199,6 +199,50 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onConfigurationChanged(
+        newConfig: android.content.res.Configuration
+    ) {
+        super.onConfigurationChanged(newConfig)
+
+        // Jangan mengubah susunan ketika video berada di fullscreen.
+        if (fullscreen || !::playerView.isInitialized) return
+
+        val previousPlayerView = playerView
+        val currentPlayer = player
+        val selectedChannelIndex =
+            if (::channelSpinner.isInitialized) {
+                channelSpinner.selectedItemPosition
+            } else {
+                0
+            }
+
+        // Lepaskan tampilan lama, bukan player-nya.
+        previousPlayerView.player = null
+
+        buildUi()
+
+        // Pasang kembali player yang sama ke tampilan baru.
+        playerView.player = currentPlayer
+
+        // Gunakan data playlist di memori, tanpa mengunduh ulang.
+        if (playlistChannels.isNotEmpty()) {
+            renderChannelGrid(playlistChannels)
+
+            channelSpinner.adapter = ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                playlistChannels.map { it.name }
+            )
+
+            channelSpinner.setSelection(
+                selectedChannelIndex.coerceIn(
+                    0,
+                    playlistChannels.lastIndex
+                )
+            )
+        }
+    }
+
     private fun buildUi() {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
