@@ -38,6 +38,16 @@ class MainActivity : Activity() {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
     private lateinit var videoContainer: FrameLayout
+    private lateinit var playbackSeekBar: SeekBar
+    private lateinit var playbackPositionText: TextView
+    private lateinit var playbackDurationText: TextView
+    private var userSeekingPlayback = false
+    private val seekUpdateRunnable = object : Runnable {
+        override fun run() {
+            updatePlaybackSeekBar()
+            controlsHandler.postDelayed(this, 500L)
+        }
+    }
     private lateinit var urlInput: EditText
     private lateinit var refererInput: EditText
     private lateinit var originInput: EditText
@@ -368,6 +378,93 @@ class MainActivity : Activity() {
                 )
             )
         }
+
+        playbackPositionText = TextView(this).apply {
+            text = "00:00"
+            setTextColor(Color.CYAN)
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setSingleLine(true)
+        }
+        playbackDurationText = TextView(this).apply {
+            text = "--:--"
+            setTextColor(Color.CYAN)
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setSingleLine(true)
+        }
+        playbackSeekBar = SeekBar(this).apply {
+            max = 1000
+            isEnabled = false
+            setPadding(0, 0, 0, 0)
+            progressTintList =
+                android.content.res.ColorStateList.valueOf(Color.CYAN)
+            thumbTintList =
+                android.content.res.ColorStateList.valueOf(Color.CYAN)
+            progressBackgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.argb(110, 0, 220, 255))
+        }
+
+        playbackSeekBar.setOnSeekBarChangeListener(
+            object : SeekBar.OnSeekBarChangeListener {
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                    userSeekingPlayback = true
+                }
+
+                override fun onProgressChanged(
+                    seekBar: SeekBar?, progress: Int, fromUser: Boolean
+                ) {
+                    if (!fromUser) return
+                    val duration = player?.duration ?: C.TIME_UNSET
+                    if (duration > 0 && duration != C.TIME_UNSET) {
+                        playbackPositionText.text = formatPlaybackTime(
+                            duration * progress.toLong() / playbackSeekBar.max
+                        )
+                    }
+                }
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                    val exo = player
+                    val duration = exo?.duration ?: C.TIME_UNSET
+                    if (exo != null && duration > 0 && duration != C.TIME_UNSET) {
+                        exo.seekTo(
+                            duration * playbackSeekBar.progress.toLong() /
+                                playbackSeekBar.max
+                        )
+                    }
+                    userSeekingPlayback = false
+                    updatePlaybackSeekBar()
+                }
+            }
+        )
+
+        val playbackBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), 0, dp(8), 0)
+            setBackgroundColor(Color.argb(220, 3, 12, 30))
+            addView(
+                playbackPositionText,
+                LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.MATCH_PARENT)
+            )
+            addView(
+                playbackSeekBar,
+                LinearLayout.LayoutParams(0, dp(30), 1f)
+            )
+            addView(
+                playbackDurationText,
+                LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.MATCH_PARENT)
+            )
+        }
+
+        videoContainer.addView(
+            playbackBar,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(42),
+                Gravity.BOTTOM
+            )
+        )
 
         val settingsPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -2907,6 +3004,8 @@ class MainActivity : Activity() {
                         }
                     })
                     exo.prepare()
+                    controlsHandler.removeCallbacks(seekUpdateRunnable)
+                    controlsHandler.post(seekUpdateRunnable)
                     exo.playWhenReady = true
                 }
         } catch (e: Exception) {
@@ -2954,7 +3053,57 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun updatePlaybackSeekBar() {
+        if (!::playbackSeekBar.isInitialized) return
+
+        val exo = player
+        if (exo == null) {
+            playbackSeekBar.isEnabled = false
+            playbackDurationText.text = "--:--"
+            playbackPositionText.text = "00:00"
+            if (!userSeekingPlayback) playbackSeekBar.progress = 0
+            return
+        }
+
+        val duration = exo.duration
+        val canSeek = duration > 0 && duration != C.TIME_UNSET
+        playbackSeekBar.isEnabled = canSeek
+        playbackDurationText.text =
+            if (canSeek) formatPlaybackTime(duration) else "LIVE"
+
+        if (!userSeekingPlayback) {
+            playbackPositionText.text = formatPlaybackTime(exo.currentPosition)
+            playbackSeekBar.progress = if (canSeek) {
+                (exo.currentPosition.coerceAtLeast(0L) *
+                    playbackSeekBar.max / duration)
+                    .toInt().coerceIn(0, playbackSeekBar.max)
+            } else {
+                0
+            }
+        }
+    }
+
+    private fun formatPlaybackTime(milliseconds: Long): String {
+        val seconds = milliseconds.coerceAtLeast(0L) / 1000L
+        val hours = seconds / 3600L
+        val minutes = (seconds % 3600L) / 60L
+        val secs = seconds % 60L
+
+        return if (hours > 0L) {
+            String.format(
+                java.util.Locale.ROOT, "%02d:%02d:%02d",
+                hours, minutes, secs
+            )
+        } else {
+            String.format(
+                java.util.Locale.ROOT, "%02d:%02d",
+                minutes, secs
+            )
+        }
+    }
+
     private fun releasePlayer() {
+        controlsHandler.removeCallbacks(seekUpdateRunnable)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (::playerView.isInitialized) playerView.player = null
         player?.release()
@@ -2977,6 +3126,7 @@ class MainActivity : Activity() {
         splashAnimator?.cancel()
         splashAnimator = null
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
+        controlsHandler.removeCallbacks(seekUpdateRunnable)
         channelUrlBlinkRunnable?.let {
             controlsHandler.removeCallbacks(it)
         }
