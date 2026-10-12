@@ -475,8 +475,17 @@ class MainActivity : Activity() {
             val column = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(2), 0, dp(2), 0)
+                setPadding(0, 0, 0, 0)
+                setBackgroundColor(Color.TRANSPARENT)
+                background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
             }
+
+            // Ikon tetap berfungsi, tanpa kotak atau warna latar.
+            view.background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+            view.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
+            view.stateListAnimator = null
+
             column.addView(
                 view,
                 LinearLayout.LayoutParams(
