@@ -1138,22 +1138,34 @@ class MainActivity : Activity() {
         // Pindahkan tombol yang SUDAH ADA ke panel roda gigi.
         // Urutan: resolusi, ukuran, fullscreen, subtitle, volume,
         // dan kecerahan. Fungsi klik tetap menggunakan handler lama.
-        addControl(resolutionButton, 40)
         addControl(sizeNeonButton, 40)
         addControl(fullscreenNeonButton, 40)
         addControl(subtitleNeonButton, 40)
         addControl(volumeNeonButton, 40)
         addControl(brightnessNeonButton, 40)
 
-        // Roda gigi Cyber Neon mengambang di dalam video.
+        // Roda gigi Cyber Neon di sudut kiri bawah video.
         videoContainer.addView(
             gearButton,
             FrameLayout.LayoutParams(
                 dp(32),
                 dp(32),
-                Gravity.BOTTOM or Gravity.END
+                Gravity.BOTTOM or Gravity.START
             ).apply {
-                rightMargin = dp(8)
+                leftMargin = dp(8)
+                bottomMargin = dp(8)
+            }
+        )
+
+        // Tombol resolusi selalu terlihat di sebelah kanan roda gigi.
+        videoContainer.addView(
+            resolutionButton,
+            FrameLayout.LayoutParams(
+                dp(32),
+                dp(32),
+                Gravity.BOTTOM or Gravity.START
+            ).apply {
+                leftMargin = dp(44)
                 bottomMargin = dp(8)
             }
         )
