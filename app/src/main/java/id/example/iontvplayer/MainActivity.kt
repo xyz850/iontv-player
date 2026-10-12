@@ -1078,9 +1078,8 @@ class MainActivity : Activity() {
         channelUrlStatuses[url] = normalized
         channelUrlDetails[url] = detail
 
-        if (normalized != "MEMERIKSA" && previousStatus != normalized) {
-            scheduleChannelCategoryRefresh()
-        }
+        // Jangan render ulang seluruh daftar saat status URL berubah.
+        // Ini menjaga posisi daftar dan pilihan channel tetap stabil.
 
         val neonColor = when (normalized) {
             "ONLINE" -> Color.rgb(0, 245, 255)   // Cyan neon
@@ -1244,7 +1243,8 @@ class MainActivity : Activity() {
             override fun run() {
                 if (isFinishing || isDestroyed) return
 
-                scanPlaylistUrls()
+                // Pemindaian massal dinonaktifkan agar tidak membebani
+                // jaringan ketika video sedang diputar.
                 controlsHandler.postDelayed(this, 5 * 60 * 1000L)
             }
         }
@@ -2594,11 +2594,22 @@ class MainActivity : Activity() {
                 }
             }
 
+            val loadControl =
+                androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(
+                        15_000, // Buffer minimum: 15 detik
+                        50_000, // Buffer maksimum: 50 detik
+                        2_500,  // Mulai memutar: 2,5 detik
+                        5_000   // Lanjut setelah buffering: 5 detik
+                    )
+                    .build()
+
             player = ExoPlayer.Builder(
                 this,
                 androidx.media3.exoplayer.DefaultRenderersFactory(this)
                     .setEnableDecoderFallback(true)
             )
+                .setLoadControl(loadControl)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build()
                 .also { exo ->
