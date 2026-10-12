@@ -245,15 +245,32 @@ class MainActivity : Activity() {
 
         val controlsScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
+            isFillViewport = true
             clipToPadding = false
             setPadding(dp(2), 0, dp(2), 0)
         }
         val controlsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(44)
+            )
         }
-        controlsScroll.addView(controlsRow)
-        settingsPanel.addView(controlsScroll)
+        controlsScroll.addView(
+            controlsRow,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(44)
+            )
+        )
+        settingsPanel.addView(
+            controlsScroll,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(44)
+            )
+        )
 
         fun addControl(view: View, width: Int) {
             val column = LinearLayout(this).apply {
@@ -294,18 +311,31 @@ class MainActivity : Activity() {
                 setOnClickListener { action() }
             }
 
-            control.addView(
-                TextView(this).apply {
-                    text = symbol
-                    textSize = 16f
-                    gravity = Gravity.CENTER
-                    includeFontPadding = false
-                    setTextColor(accent)
-                },
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
+            if (label == "keluar") {
+                control.addView(
+                    android.widget.ImageView(this).apply {
+                        setImageResource(R.drawable.ic_power)
+                        imageTintList =
+                            android.content.res.ColorStateList.valueOf(accent)
+                        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                        contentDescription = description
+                    },
+                    LinearLayout.LayoutParams(dp(21), dp(21))
                 )
-            )
+            } else {
+                control.addView(
+                    TextView(this).apply {
+                        text = symbol
+                        textSize = 16f
+                        gravity = Gravity.CENTER
+                        includeFontPadding = false
+                        setTextColor(accent)
+                    },
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(21)
+                    )
+                )
+            }
 
             control.addView(
                 TextView(this).apply {
@@ -320,7 +350,13 @@ class MainActivity : Activity() {
                 )
             )
 
-            addControl(control, 76)
+            controlsRow.addView(
+                control,
+                LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                    marginStart = dp(1)
+                    marginEnd = dp(1)
+                }
+            )
             return control
         }
 
@@ -344,6 +380,24 @@ class MainActivity : Activity() {
             popup.show()
         }
 
+        lateinit var resolutionButton: LinearLayout
+        resolutionButton = addNeonControl(
+            "▤", "resolusi", "Pilih resolusi video"
+        ) {
+            val popup = android.widget.PopupMenu(this, resolutionButton)
+            val adapter = resolutionSpinner.adapter
+            if (adapter != null) {
+                for (i in 0 until adapter.count) {
+                    val title = adapter.getItem(i)?.toString() ?: continue
+                    popup.menu.add(title).setOnMenuItemClickListener {
+                        resolutionSpinner.setSelection(i)
+                        true
+                    }
+                }
+            }
+            popup.show()
+        }
+
         addNeonControl(
             "↻", "refresh", "Muat ulang stream saat ini"
         ) {
@@ -359,7 +413,7 @@ class MainActivity : Activity() {
         }
 
         addNeonControl(
-            "⏻", "keluar", "Keluar dari aplikasi"
+            " ", "keluar", "Keluar dari aplikasi"
         ) {
             finish()
         }
@@ -401,6 +455,7 @@ class MainActivity : Activity() {
                 }
         }
         addSpinnerControl("", orientationSpinner, 100)
+        controlsRow.getChildAt(5).visibility = View.GONE
 
         sizeSpinner = Spinner(this).apply {
             adapter = compactSpinnerAdapter(
@@ -468,6 +523,7 @@ class MainActivity : Activity() {
                 }
         }
         addSpinnerControl("", resolutionSpinner, 104)
+        controlsRow.getChildAt(6).visibility = View.GONE
 
         val brightnessColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1099,11 +1155,17 @@ class MainActivity : Activity() {
                 }
             }
 
-            val exitButton = makeButton("⏻", "Keluar dari layar penuh").apply {
-                textSize = 19f
+            val exitButton = android.widget.ImageButton(this).apply {
+                contentDescription = "Keluar dari layar penuh"
+                setImageResource(R.drawable.ic_power)
+                imageTintList =
+                    android.content.res.ColorStateList.valueOf(accent)
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                setBackgroundColor(Color.TRANSPARENT)
+                stateListAnimator = null
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                setOnClickListener { toggleFullscreen() }
             }
-            exitButton.setTextColor(accent)
-            exitButton.setOnClickListener { toggleFullscreen() }
 
             val playButton = makeButton("▶", "Putar atau jeda")
             toolbar.addView(
