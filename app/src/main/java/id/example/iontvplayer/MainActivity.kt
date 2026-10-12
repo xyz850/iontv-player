@@ -1144,19 +1144,6 @@ class MainActivity : Activity() {
         addControl(volumeNeonButton, 40)
         addControl(brightnessNeonButton, 40)
 
-        // Roda gigi Cyber Neon di sudut kiri bawah video.
-        videoContainer.addView(
-            gearButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.START
-            ).apply {
-                leftMargin = dp(8)
-                bottomMargin = dp(8)
-            }
-        )
-
         // Tombol resolusi selalu terlihat di sebelah kanan roda gigi.
         videoContainer.addView(
             resolutionButton,
@@ -1256,11 +1243,23 @@ class MainActivity : Activity() {
             )
         )
 
-        // Tombol power mandiri di bawah layar utama, di luar roda gigi.
+        // Bilah bawah layar utama.
         val bottomExitBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
         }
+
+        // Roda gigi tunggal di kiri bawah layar utama.
+        bottomExitBar.addView(
+            gearButton,
+            LinearLayout.LayoutParams(dp(32), dp(32))
+        )
+
+        // Ruang fleksibel menjaga tombol refresh dan keluar di sisi kanan.
+        bottomExitBar.addView(
+            View(this),
+            LinearLayout.LayoutParams(0, 1, 1f)
+        )
 
         val bottomRefreshButton = android.widget.ImageButton(this).apply {
             contentDescription = "Muat ulang stream saat ini"
