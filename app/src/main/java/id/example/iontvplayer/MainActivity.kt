@@ -1135,27 +1135,31 @@ class MainActivity : Activity() {
             }
         }
 
-        // Pindahkan tombol yang SUDAH ADA ke panel roda gigi.
-        // Urutan: resolusi, ukuran, fullscreen, subtitle, volume,
-        // dan kecerahan. Fungsi klik tetap menggunakan handler lama.
-        addControl(sizeNeonButton, 40)
-        addControl(fullscreenNeonButton, 40)
+        // Kontrol tambahan tetap tersedia melalui panel pengaturan.
         addControl(subtitleNeonButton, 40)
-        addControl(volumeNeonButton, 40)
         addControl(brightnessNeonButton, 40)
 
-        // Tombol resolusi tetap di kiri bawah area video.
-        videoContainer.addView(
-            resolutionButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(48)
-                bottomMargin = dp(8)
-            }
-        )
+        // Toolbar Cyber Neon di dalam area video.
+        // Urutan kiri ke kanan: volume, fullscreen, ukuran,
+        // resolusi, dan pengaturan.
+        fun placeVideoIcon(view: View, right: Int) {
+            videoContainer.addView(
+                view,
+                FrameLayout.LayoutParams(
+                    dp(32),
+                    dp(32),
+                    Gravity.BOTTOM or Gravity.END
+                ).apply {
+                    rightMargin = dp(right)
+                    bottomMargin = dp(8)
+                }
+            )
+        }
+
+        placeVideoIcon(volumeNeonButton, 176)
+        placeVideoIcon(fullscreenNeonButton, 136)
+        placeVideoIcon(sizeNeonButton, 96)
+        placeVideoIcon(resolutionButton, 48)
 
         val landscapeLayout =
             resources.configuration.orientation ==
