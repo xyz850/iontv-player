@@ -116,6 +116,7 @@ class MainActivity : Activity() {
     private val accent = Color.rgb(0, 245, 255)
     private val white = Color.WHITE
     private val muted = Color.rgb(157, 185, 200)
+    private var splashAnimator: android.animation.ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,6 +126,8 @@ class MainActivity : Activity() {
         showSplash()
 
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            splashAnimator?.cancel()
+            splashAnimator = null
             buildUi()
             restoreSavedPlaylist()
         }, 1400)
@@ -171,15 +174,83 @@ class MainActivity : Activity() {
         }
         splash.addView(message)
 
-        val progress = ProgressBar(this).apply {
-            isIndeterminate = true
+        val loadingLine = object : View(this) {
+            var phase = 0f
+            private val paint = android.graphics.Paint(
+                android.graphics.Paint.ANTI_ALIAS_FLAG
+            )
+
+            override fun onDraw(canvas: android.graphics.Canvas) {
+                super.onDraw(canvas)
+                val left = dp(4).toFloat()
+                val right = width - dp(4).toFloat()
+                val top = (height - dp(6)) / 2f
+                val bottom = top + dp(6)
+                val track = android.graphics.RectF(left, top, right, bottom)
+
+                paint.clearShadowLayer()
+                paint.color = Color.rgb(20, 38, 54)
+                canvas.drawRoundRect(track, dp(3).toFloat(), dp(3).toFloat(), paint)
+
+                val colors = intArrayOf(
+                    Color.rgb(0, 245, 255),
+                    Color.rgb(255, 54, 209),
+                    Color.rgb(75, 160, 255)
+                )
+                val total = right - left
+                val block = total * 0.42f
+                val start = left + (total + block) * phase - block
+                val segment = block / colors.size
+
+                canvas.save()
+                canvas.clipRect(track)
+                for (i in colors.indices) {
+                    paint.color = colors[i]
+                    paint.setShadowLayer(dp(6).toFloat(), 0f, 0f, colors[i])
+                    val rect = android.graphics.RectF(
+                        start + i * segment, top,
+                        start + (i + 1) * segment, bottom
+                    )
+                    canvas.drawRoundRect(
+                        rect, dp(3).toFloat(), dp(3).toFloat(), paint
+                    )
+                }
+                paint.clearShadowLayer()
+                canvas.restore()
+            }
+        }.apply {
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         }
+
         splash.addView(
-            progress,
-            LinearLayout.LayoutParams(dp(48), dp(48))
+            loadingLine,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(20)
+            )
         )
 
+        val neonCaption = TextView(this).apply {
+            text = "CYBER NEON  •  STREAM PLAYER"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(75, 160, 255))
+            letterSpacing = 0.10f
+            setPadding(0, dp(14), 0, 0)
+        }
+        splash.addView(neonCaption)
+
         setContentView(splash)
+        splashAnimator?.cancel()
+        splashAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1250L
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener {
+                loadingLine.phase = it.animatedValue as Float
+                loadingLine.invalidate()
+            }
+            start()
+        }
     }
 
     private fun restoreSavedPlaylist() {
@@ -2860,6 +2931,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        splashAnimator?.cancel()
+        splashAnimator = null
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
         channelUrlBlinkRunnable?.let {
             controlsHandler.removeCallbacks(it)
