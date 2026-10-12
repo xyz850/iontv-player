@@ -559,25 +559,7 @@ class MainActivity : Activity() {
             return control
         }
 
-        addNeonControl(
-            "⛶", "fullscreen", "Buka layar penuh"
-        ) {
-            toggleFullscreen()
-        }
 
-        lateinit var sizeButton: LinearLayout
-        sizeButton = addNeonControl(
-            "▣", "ukuran", "Pilih ukuran video"
-        ) {
-            val popup = android.widget.PopupMenu(this, sizeButton)
-            listOf("Fit", "Fill", "Zoom").forEachIndexed { index, title ->
-                popup.menu.add(title).setOnMenuItemClickListener {
-                    sizeSpinner.setSelection(index)
-                    true
-                }
-            }
-            popup.show()
-        }
 
         addNeonControl(
             "↻", "refresh", "Muat ulang stream saat ini"
