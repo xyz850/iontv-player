@@ -827,7 +827,7 @@ class MainActivity : Activity() {
                     setColor(if (onlineSelected) Color.rgb(5, 30, 42)
                              else Color.rgb(17, 24, 36))
                     setStroke(dp(1), if (onlineSelected) cyan
-                                     else Color.rgb(55, 65, 80))
+                                     else Color.rgb(0, 95, 115))
                 }
 
             offlineFolder.setTextColor(if (offlineSelected) magenta else muted)
@@ -838,7 +838,7 @@ class MainActivity : Activity() {
                     setColor(if (offlineSelected) Color.rgb(38, 13, 42)
                              else Color.rgb(17, 24, 36))
                     setStroke(dp(1), if (offlineSelected) magenta
-                                     else Color.rgb(55, 65, 80))
+                                     else Color.rgb(0, 95, 115))
                 }
 
             checkingFolder.setTextColor(if (checkingSelected) blueNeon else muted)
@@ -849,7 +849,7 @@ class MainActivity : Activity() {
                     setColor(if (checkingSelected) Color.rgb(9, 24, 48)
                              else Color.rgb(17, 24, 36))
                     setStroke(dp(1), if (checkingSelected) blueNeon
-                                     else Color.rgb(55, 65, 80))
+                                     else Color.rgb(0, 95, 115))
                 }
         }
 
@@ -1327,8 +1327,8 @@ class MainActivity : Activity() {
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = dp(10).toFloat()
-                    setColor(panel)
-                    setStroke(dp(1), 0xFF343944.toInt())
+                    setColor(Color.rgb(8, 17, 31))
+                    setStroke(dp(1), Color.rgb(0, 190, 220))
                 }
                 elevation = dp(1).toFloat()
                 isClickable = true
@@ -1348,7 +1348,7 @@ class MainActivity : Activity() {
             val name = TextView(this).apply {
                 text = entry.name
                 textSize = 12f
-                setTextColor(white)
+                setTextColor(Color.rgb(220, 248, 255))
                 gravity = Gravity.CENTER_VERTICAL
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
