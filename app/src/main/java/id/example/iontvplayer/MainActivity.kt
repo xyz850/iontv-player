@@ -575,11 +575,6 @@ class MainActivity : Activity() {
             }
         }
 
-        addNeonControl(
-            " ", "keluar", "Keluar dari aplikasi"
-        ) {
-            finish()
-        }
 
         fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
             val column = LinearLayout(this).apply {
@@ -1321,6 +1316,38 @@ class MainActivity : Activity() {
             mainContent,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            )
+        )
+
+        // Tombol power mandiri di bawah layar utama, di luar roda gigi.
+        val bottomExitBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
+        val bottomExitButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Keluar dari aplikasi"
+            setImageResource(R.drawable.ic_power)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            setOnClickListener {
+                finish()
+            }
+        }
+
+        bottomExitBar.addView(
+            bottomExitButton,
+            LinearLayout.LayoutParams(dp(42), dp(38))
+        )
+
+        root.addView(
+            bottomExitBar,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(42)
             )
         )
 
