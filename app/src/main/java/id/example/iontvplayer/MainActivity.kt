@@ -55,7 +55,7 @@ class MainActivity : Activity() {
     private lateinit var channelGrid: GridLayout
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
-    private var selectedChannelCategory = "ONLINE"
+    private var selectedChannelCategory = "SEMUA"
     private var channelCategoryRefreshRunnable: Runnable? = null
 
     private val channelUrlStatuses = mutableMapOf<String, String>()
@@ -740,6 +740,7 @@ class MainActivity : Activity() {
         // Panel kontrol dipasang di luar area scroll channel.
 
         val channelLabel = TextView(this).apply {
+            visibility = View.GONE
             text = "DAFTAR CHANNEL"
             textSize = 13f
             setTextColor(accent)
@@ -748,6 +749,7 @@ class MainActivity : Activity() {
         channelContent.addView(channelLabel)
 
         channelSpinner = Spinner(this).apply {
+            visibility = View.GONE
             adapter = ArrayAdapter(
                 this@MainActivity,
                 android.R.layout.simple_spinner_dropdown_item,
@@ -848,80 +850,72 @@ class MainActivity : Activity() {
         val channelCategoryRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(4), dp(8), dp(4))
+            setPadding(dp(5), dp(4), dp(5), dp(4))
         }
 
-        val onlineFolder = TextView(this).apply {
-            text = "ONLINE"
-            textSize = 11f
-            gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "Tampilkan URL ONLINE"
+        fun makeCategoryButton(title: String, description: String): TextView {
+            return TextView(this).apply {
+                text = title
+                textSize = 9f
+                gravity = Gravity.CENTER
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                isClickable = true
+                isFocusable = true
+                contentDescription = description
+                setPadding(dp(1), 0, dp(1), 0)
+            }
         }
 
-        val offlineFolder = TextView(this).apply {
-            text = "OFFLINE"
-            textSize = 11f
-            gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "Tampilkan URL OFFLINE"
-        }
-
-        val checkingFolder = TextView(this).apply {
-            text = "MEMERIKSA"
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
-            isClickable = true
-            isFocusable = true
-            contentDescription = "Tampilkan URL MEMERIKSA"
-        }
+        val allFolder = makeCategoryButton(
+            "SEMUA", "Tampilkan semua channel playlist"
+        )
+        val onlineFolder = makeCategoryButton(
+            "ONLINE", "Tampilkan URL ONLINE"
+        )
+        val offlineFolder = makeCategoryButton(
+            "OFFLINE", "Tampilkan URL OFFLINE"
+        )
+        val checkingFolder = makeCategoryButton(
+            "CEK", "Tampilkan URL yang sedang diperiksa"
+        )
 
         val updateFolderStyles = {
-            val onlineSelected = selectedChannelCategory == "ONLINE"
-            val offlineSelected = selectedChannelCategory == "OFFLINE"
-            val checkingSelected = selectedChannelCategory == "MEMERIKSA"
             val cyan = Color.rgb(0, 245, 255)
             val magenta = Color.rgb(255, 54, 209)
             val blueNeon = Color.rgb(75, 160, 255)
             val muted = Color.rgb(145, 160, 175)
 
-            onlineFolder.setTextColor(if (onlineSelected) cyan else muted)
-            onlineFolder.background =
-                android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(9).toFloat()
-                    setColor(if (onlineSelected) Color.rgb(5, 30, 42)
-                             else Color.rgb(17, 24, 36))
-                    setStroke(dp(1), if (onlineSelected) cyan
-                                     else Color.rgb(0, 95, 115))
-                }
+            val items = listOf(
+                Triple(allFolder, "SEMUA", cyan),
+                Triple(onlineFolder, "ONLINE", cyan),
+                Triple(offlineFolder, "OFFLINE", magenta),
+                Triple(checkingFolder, "MEMERIKSA", blueNeon)
+            )
 
-            offlineFolder.setTextColor(if (offlineSelected) magenta else muted)
-            offlineFolder.background =
-                android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(9).toFloat()
-                    setColor(if (offlineSelected) Color.rgb(38, 13, 42)
-                             else Color.rgb(17, 24, 36))
-                    setStroke(dp(1), if (offlineSelected) magenta
-                                     else Color.rgb(0, 95, 115))
-                }
+            items.forEach { (view, category, color) ->
+                val selected = selectedChannelCategory == category
+                view.setTextColor(if (selected) color else muted)
+                view.background =
+                    android.graphics.drawable.GradientDrawable().apply {
+                        shape =
+                            android.graphics.drawable.GradientDrawable.RECTANGLE
+                        cornerRadius = dp(7).toFloat()
+                        setColor(
+                            if (selected) Color.rgb(9, 24, 36)
+                            else Color.rgb(17, 24, 36)
+                        )
+                        setStroke(
+                            dp(1),
+                            if (selected) color else Color.rgb(0, 75, 95)
+                        )
+                    }
+            }
+        }
 
-            checkingFolder.setTextColor(if (checkingSelected) blueNeon else muted)
-            checkingFolder.background =
-                android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(9).toFloat()
-                    setColor(if (checkingSelected) Color.rgb(9, 24, 48)
-                             else Color.rgb(17, 24, 36))
-                    setStroke(dp(1), if (checkingSelected) blueNeon
-                                     else Color.rgb(0, 95, 115))
-                }
+        allFolder.setOnClickListener {
+            selectedChannelCategory = "SEMUA"
+            updateFolderStyles()
+            renderChannelGrid(playlistChannels)
         }
 
         onlineFolder.setOnClickListener {
@@ -942,22 +936,16 @@ class MainActivity : Activity() {
             renderChannelGrid(playlistChannels)
         }
 
-        channelCategoryRow.addView(
-            onlineFolder,
-            LinearLayout.LayoutParams(0, dp(36), 1f).apply {
-                marginEnd = dp(4)
+        listOf(allFolder, onlineFolder, offlineFolder, checkingFolder)
+            .forEachIndexed { index, view ->
+                channelCategoryRow.addView(
+                    view,
+                    LinearLayout.LayoutParams(0, dp(34), 1f).apply {
+                        if (index < 3) marginEnd = dp(3)
+                    }
+                )
             }
-        )
-        channelCategoryRow.addView(
-            offlineFolder,
-            LinearLayout.LayoutParams(0, dp(36), 1f).apply {
-                marginEnd = dp(4)
-            }
-        )
-        channelCategoryRow.addView(
-            checkingFolder,
-            LinearLayout.LayoutParams(0, dp(36), 1f)
-        )
+
         updateFolderStyles()
 
         val landscapeLayout =
@@ -1341,7 +1329,9 @@ class MainActivity : Activity() {
         }
 
         val visibleChannels = channels.filter { entry ->
-            (channelUrlStatuses[entry.url] ?: "MEMERIKSA") == selectedChannelCategory
+            selectedChannelCategory == "SEMUA" ||
+                (channelUrlStatuses[entry.url] ?: "MEMERIKSA") ==
+                    selectedChannelCategory
         }
 
         if (visibleChannels.isEmpty()) {
