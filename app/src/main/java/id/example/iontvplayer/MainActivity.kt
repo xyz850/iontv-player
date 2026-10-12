@@ -123,14 +123,12 @@ class MainActivity : Activity() {
         window.statusBarColor = bg
         window.navigationBarColor = bg
 
-        showSplash()
-
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            splashAnimator?.cancel()
-            splashAnimator = null
-            buildUi()
-            restoreSavedPlaylist()
-        }, 1400)
+        // Langsung tampilkan UI utama tanpa layar pembuka.
+        // Pemulihan playlist otomatis tetap dijalankan.
+        splashAnimator?.cancel()
+        splashAnimator = null
+        buildUi()
+        restoreSavedPlaylist()
     }
 
     private fun showSplash() {
