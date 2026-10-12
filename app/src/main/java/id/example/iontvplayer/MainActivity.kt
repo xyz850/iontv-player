@@ -2082,6 +2082,9 @@ class MainActivity : Activity() {
                     Gravity.TOP
                 )
             )
+            // Toolbar atas fullscreen disembunyikan.
+            // Kontrol Cyber Neon pada video tetap dipertahankan.
+            toolbar.visibility = View.GONE
 
             // Menu ukuran video: satu ikon untuk membuka/tutup pilihan.
             val sizeModes = listOf(
