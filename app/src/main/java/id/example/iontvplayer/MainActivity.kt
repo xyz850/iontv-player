@@ -859,10 +859,22 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
-                settingsPanel.visibility = View.VISIBLE
-                resolutionSpinner.post {
-                    resolutionSpinner.performClick()
+                val popup = android.widget.PopupMenu(this@MainActivity, this)
+                val adapter = resolutionSpinner.adapter
+
+                if (adapter != null) {
+                    for (index in 0 until adapter.count) {
+                        val label = adapter.getItem(index)?.toString()
+                            ?: continue
+
+                        popup.menu.add(label).setOnMenuItemClickListener {
+                            resolutionSpinner.setSelection(index)
+                            true
+                        }
+                    }
                 }
+
+                popup.show()
             }
         }
 
