@@ -1,9 +1,15 @@
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:textAppearanceSmallPopupMenu">@style/IonCompactPopupText</item>
+        <item name="android:textAppearanceLargePopupMenu">@style/IonCompactPopupText</item>
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#42D392</item>
         <item name="android:statusBarColor">#101114</item>
         <item name="android:navigationBarColor">#101114</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="IonCompactPopupText" parent="@android:style/TextAppearance.Small">
+        <item name="android:textSize">@dimen/ion_text_menu</item>
     </style>
 </resources>

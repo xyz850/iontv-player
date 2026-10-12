@@ -2394,19 +2394,36 @@ class MainActivity : Activity() {
             android.R.layout.simple_spinner_item,
             items
         ) {
+            private fun styleCompactText(view: View): View {
+                (view as? TextView)?.apply {
+                    textSize = resources.getDimension(
+                        R.dimen.ion_text_spinner
+                    ) / resources.displayMetrics.scaledDensity
+                    maxLines = 1
+                    setTextColor(accent)
+                    setPadding(dp(4), 0, dp(2), 0)
+                }
+                return view
+            }
+
             override fun getView(
                 position: Int,
                 convertView: View?,
                 parent: ViewGroup
             ): View {
-                return super.getView(position, convertView, parent).apply {
-                    (this as? TextView)?.apply {
-                        textSize = 10f
-                        maxLines = 1
-                        setTextColor(accent)
-                        setPadding(dp(4), 0, dp(2), 0)
-                    }
-                }
+                return styleCompactText(
+                    super.getView(position, convertView, parent)
+                )
+            }
+
+            override fun getDropDownView(
+                position: Int,
+                convertView: View?,
+                parent: ViewGroup
+            ): View {
+                return styleCompactText(
+                    super.getDropDownView(position, convertView, parent)
+                )
             }
         }.apply {
             setDropDownViewResource(
@@ -3111,11 +3128,7 @@ class MainActivity : Activity() {
         val previousSelection = resolutionSpinner.selectedItem?.toString()
         updatingResolution = true
         val labels = listOf("Resolusi: otomatis") + videoOptions.map { it.label }
-        resolutionSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            labels
-        )
+        resolutionSpinner.adapter = compactSpinnerAdapter(labels)
         val selectedIndex = labels.indexOf(previousSelection).let {
             if (it >= 0) it else 0
         }
