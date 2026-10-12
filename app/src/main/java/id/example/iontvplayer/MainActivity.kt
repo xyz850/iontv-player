@@ -814,6 +814,26 @@ class MainActivity : Activity() {
             }
         }
 
+        // Tombol subtitle Cyber Neon: pilih subtitle eksternal.
+        val subtitleNeonButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Pilih file subtitle"
+            setImageResource(R.drawable.ic_subtitle_neon)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+            setOnClickListener {
+                val intent = android.content.Intent(
+                    android.content.Intent.ACTION_OPEN_DOCUMENT
+                ).apply {
+                    addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                startActivityForResult(intent, 7341)
+            }
+        }
+
         // Tombol fullscreen Cyber Neon.
         val fullscreenNeonButton = android.widget.ImageButton(this).apply {
             contentDescription = "Buka atau tutup layar penuh"
@@ -1108,6 +1128,19 @@ class MainActivity : Activity() {
         // Volume di kiri fullscreen
         videoContainer.addView(
             volumeNeonButton,
+            FrameLayout.LayoutParams(
+                dp(32),
+                dp(32),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(180)
+                bottomMargin = dp(8)
+            }
+        )
+
+        // Subtitle di samping kanan volume.
+        videoContainer.addView(
+            subtitleNeonButton,
             FrameLayout.LayoutParams(
                 dp(32),
                 dp(32),
@@ -2832,6 +2865,107 @@ class MainActivity : Activity() {
         val key = base64Url(hexToBytes(match.groupValues[2]))
 
         return """{"keys":[{"kty":"oct","kid":"$kid","k":"$key"}],"type":"temporary"}"""
+    }
+
+    @Deprecated("Deprecated in Android API; retained for document-picker compatibility")
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: android.content.Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != 7341 || resultCode != RESULT_OK) return
+
+        val uri = data?.data ?: return
+        val exo = player
+        if (exo == null || exo.currentMediaItem == null) {
+            Toast.makeText(
+                this,
+                "Putar video terlebih dahulu sebelum memasang subtitle.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        try {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Sebagian penyedia dokumen tidak mendukung izin persisten.
+            }
+
+            var displayName = uri.lastPathSegment.orEmpty()
+            try {
+                contentResolver.query(
+                    uri,
+                    arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val column = cursor.getColumnIndex(
+                            android.provider.OpenableColumns.DISPLAY_NAME
+                        )
+                        if (column >= 0) displayName = cursor.getString(column) ?: displayName
+                    }
+                }
+            } catch (_: Exception) {
+                // Gunakan nama dari URI jika nama berkas tidak tersedia.
+            }
+
+            val extension = displayName.substringAfterLast('.', "").lowercase()
+            val mime = when (extension) {
+                "srt" -> MimeTypes.APPLICATION_SUBRIP
+                "vtt" -> MimeTypes.TEXT_VTT
+                "ass", "ssa" -> MimeTypes.TEXT_SSA
+                else -> null
+            }
+
+            if (mime == null) {
+                Toast.makeText(
+                    this,
+                    "Format belum didukung. Gunakan file SRT, VTT, ASS, atau SSA.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+
+            val subtitle = MediaItem.SubtitleConfiguration.Builder(uri)
+                .setMimeType(mime)
+                .setLanguage("id")
+                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .build()
+
+            val index = exo.currentMediaItemIndex
+            val position = exo.currentPosition
+            val wasPlaying = exo.playWhenReady
+            val oldItem = exo.currentMediaItem ?: return
+            val oldSubtitles =
+                oldItem.localConfiguration?.subtitleConfigurations.orEmpty()
+            val updatedItem = oldItem.buildUpon()
+                .setSubtitleConfigurations(oldSubtitles + subtitle)
+                .build()
+
+            exo.replaceMediaItem(index, updatedItem)
+            exo.seekTo(index, position)
+            exo.playWhenReady = wasPlaying
+
+            Toast.makeText(
+                this,
+                "Subtitle ditambahkan: $displayName",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Gagal memasang subtitle: ${e.message ?: "kesalahan tidak diketahui"}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun playMedia(
