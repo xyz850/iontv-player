@@ -2072,6 +2072,8 @@ class MainActivity : Activity() {
 
         try {
             val httpFactory = DefaultHttpDataSource.Factory()
+                .setConnectTimeoutMs(10_000)
+                .setReadTimeoutMs(15_000)
                 .setAllowCrossProtocolRedirects(true)
                 .setDefaultRequestProperties(headers)
 
