@@ -204,11 +204,14 @@ class MainActivity : Activity() {
     ) {
         super.onConfigurationChanged(newConfig)
 
-        // Jangan mengubah susunan ketika video berada di fullscreen.
         if (fullscreen || !::playerView.isInitialized) return
 
-        val previousPlayerView = playerView
+        val oldPlayerView = playerView
         val currentPlayer = player
+        val savedPosition = currentPlayer?.currentPosition ?: 0L
+        val shouldResume = currentPlayer?.playWhenReady ?: false
+        val savedResizeMode = oldPlayerView.resizeMode
+
         val selectedChannelIndex =
             if (::channelSpinner.isInitialized) {
                 channelSpinner.selectedItemPosition
@@ -216,15 +219,14 @@ class MainActivity : Activity() {
                 0
             }
 
-        // Lepaskan tampilan lama, bukan player-nya.
-        previousPlayerView.player = null
+        // Hentikan sementara pemutaran saat permukaan video diganti.
+        currentPlayer?.playWhenReady = false
+        oldPlayerView.player = null
 
+        // Susun ulang UI sesuai orientasi perangkat.
         buildUi()
+        playerView.resizeMode = savedResizeMode
 
-        // Pasang kembali player yang sama ke tampilan baru.
-        playerView.player = currentPlayer
-
-        // Gunakan data playlist di memori, tanpa mengunduh ulang.
         if (playlistChannels.isNotEmpty()) {
             renderChannelGrid(playlistChannels)
 
@@ -240,6 +242,18 @@ class MainActivity : Activity() {
                     playlistChannels.lastIndex
                 )
             )
+        }
+
+        // Pasang player setelah tampilan baru siap, lalu lanjutkan video.
+        playerView.post {
+            playerView.player = currentPlayer
+
+            if (currentPlayer != null) {
+                if (currentPlayer.currentMediaItem != null) {
+                    currentPlayer.seekTo(savedPosition)
+                }
+                currentPlayer.playWhenReady = shouldResume
+            }
         }
     }
 
