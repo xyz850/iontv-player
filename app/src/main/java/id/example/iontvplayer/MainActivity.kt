@@ -1126,86 +1126,15 @@ class MainActivity : Activity() {
             }
         }
 
-        // Volume di kiri fullscreen
-        videoContainer.addView(
-            volumeNeonButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(180)
-                bottomMargin = dp(8)
-            }
-        )
-
-        // Subtitle di samping kanan volume.
-        videoContainer.addView(
-            subtitleNeonButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(144)
-                bottomMargin = dp(8)
-            }
-        )
-
-        // Kecerahan di kiri volume.
-        videoContainer.addView(
-            brightnessNeonButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(216)
-                bottomMargin = dp(8)
-            }
-        )
-
-
-
-
-        // Fullscreen di kiri ukuran
-        videoContainer.addView(
-            fullscreenNeonButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(108)
-                bottomMargin = dp(8)
-            }
-        )
-
-        // Ukuran di kiri resolusi
-        videoContainer.addView(
-            sizeNeonButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(72)
-                bottomMargin = dp(8)
-            }
-        )
-
-        // Ikon resolusi di kiri roda gigi, keduanya di dalam video.
-        videoContainer.addView(
-            resolutionButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(36)
-                bottomMargin = dp(8)
-            }
-        )
+        // Pindahkan tombol yang SUDAH ADA ke panel roda gigi.
+        // Urutan: resolusi, ukuran, fullscreen, subtitle, volume,
+        // dan kecerahan. Fungsi klik tetap menggunakan handler lama.
+        addControl(resolutionButton, 40)
+        addControl(sizeNeonButton, 40)
+        addControl(fullscreenNeonButton, 40)
+        addControl(subtitleNeonButton, 40)
+        addControl(volumeNeonButton, 40)
+        addControl(brightnessNeonButton, 40)
 
         // Roda gigi Cyber Neon mengambang di dalam video.
         videoContainer.addView(
