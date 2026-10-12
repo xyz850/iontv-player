@@ -1151,6 +1151,39 @@ class MainActivity : Activity() {
             }
         )
 
+        // Kecerahan di kiri volume.
+        videoContainer.addView(
+            brightnessNeonButton,
+            FrameLayout.LayoutParams(
+                dp(32),
+                dp(32),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(216)
+                bottomMargin = dp(8)
+            }
+        )
+
+
+        // Tombol kecerahan Cyber Neon: tampilkan/sembunyikan slider.
+        val brightnessNeonButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Atur kecerahan layar"
+            setImageResource(R.drawable.ic_brightness_neon)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+            setOnClickListener {
+                val panel = brightnessBar.parent as? View
+                if (panel != null) {
+                    panel.visibility =
+                        if (panel.visibility == View.VISIBLE) View.GONE
+                        else View.VISIBLE
+                }
+            }
+        }
+
         // Fullscreen di kiri ukuran
         videoContainer.addView(
             fullscreenNeonButton,
