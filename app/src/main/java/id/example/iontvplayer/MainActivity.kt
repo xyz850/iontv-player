@@ -783,7 +783,7 @@ class MainActivity : Activity() {
                 android.content.res.ColorStateList.valueOf(accent)
             setBackgroundColor(Color.TRANSPARENT)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
                 settingsPanel.visibility =
                     if (settingsPanel.visibility == View.VISIBLE) {
@@ -802,7 +802,7 @@ class MainActivity : Activity() {
                 android.content.res.ColorStateList.valueOf(accent)
             setBackgroundColor(Color.TRANSPARENT)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
                 val audio = getSystemService(AUDIO_SERVICE) as
                     android.media.AudioManager
@@ -822,7 +822,7 @@ class MainActivity : Activity() {
                 android.content.res.ColorStateList.valueOf(accent)
             setBackgroundColor(Color.TRANSPARENT)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
                 toggleFullscreen()
             }
@@ -836,7 +836,7 @@ class MainActivity : Activity() {
                 android.content.res.ColorStateList.valueOf(accent)
             setBackgroundColor(Color.TRANSPARENT)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
                 val popup = android.widget.PopupMenu(this@MainActivity, this)
                 listOf("Fit", "Fill", "Zoom").forEachIndexed { index, title ->
@@ -857,7 +857,7 @@ class MainActivity : Activity() {
                 android.content.res.ColorStateList.valueOf(accent)
             setBackgroundColor(Color.TRANSPARENT)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
                 settingsPanel.visibility = View.VISIBLE
                 resolutionSpinner.post {
@@ -1097,11 +1097,11 @@ class MainActivity : Activity() {
         videoContainer.addView(
             volumeNeonButton,
             FrameLayout.LayoutParams(
-                dp(40),
-                dp(40),
+                dp(32),
+                dp(32),
                 Gravity.BOTTOM or Gravity.END
             ).apply {
-                rightMargin = dp(184)
+                rightMargin = dp(144)
                 bottomMargin = dp(8)
             }
         )
@@ -1110,11 +1110,11 @@ class MainActivity : Activity() {
         videoContainer.addView(
             fullscreenNeonButton,
             FrameLayout.LayoutParams(
-                dp(40),
-                dp(40),
+                dp(32),
+                dp(32),
                 Gravity.BOTTOM or Gravity.END
             ).apply {
-                rightMargin = dp(140)
+                rightMargin = dp(108)
                 bottomMargin = dp(8)
             }
         )
@@ -1123,11 +1123,11 @@ class MainActivity : Activity() {
         videoContainer.addView(
             sizeNeonButton,
             FrameLayout.LayoutParams(
-                dp(40),
-                dp(40),
+                dp(32),
+                dp(32),
                 Gravity.BOTTOM or Gravity.END
             ).apply {
-                rightMargin = dp(96)
+                rightMargin = dp(72)
                 bottomMargin = dp(8)
             }
         )
@@ -1136,11 +1136,11 @@ class MainActivity : Activity() {
         videoContainer.addView(
             resolutionButton,
             FrameLayout.LayoutParams(
-                dp(40),
-                dp(40),
+                dp(32),
+                dp(32),
                 Gravity.BOTTOM or Gravity.END
             ).apply {
-                rightMargin = dp(52)
+                rightMargin = dp(36)
                 bottomMargin = dp(8)
             }
         )
@@ -1149,8 +1149,8 @@ class MainActivity : Activity() {
         videoContainer.addView(
             gearButton,
             FrameLayout.LayoutParams(
-                dp(40),
-                dp(40),
+                dp(32),
+                dp(32),
                 Gravity.BOTTOM or Gravity.END
             ).apply {
                 rightMargin = dp(8)
