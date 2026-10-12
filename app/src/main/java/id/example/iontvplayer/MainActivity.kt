@@ -55,6 +55,8 @@ class MainActivity : Activity() {
     private lateinit var channelGrid: GridLayout
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
+    private var selectedChannelCategory = "ONLINE"
+    private var channelCategoryRefreshRunnable: Runnable? = null
 
     private val channelUrlStatuses = mutableMapOf<String, String>()
     private val channelUrlDetails = mutableMapOf<String, String>()
@@ -772,6 +774,86 @@ class MainActivity : Activity() {
                 }
             }
         }
+        val channelCategoryRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+        }
+
+        val onlineFolder = TextView(this).apply {
+            text = "ONLINE"
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Tampilkan URL ONLINE"
+        }
+
+        val offlineFolder = TextView(this).apply {
+            text = "OFFLINE"
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Tampilkan URL OFFLINE"
+        }
+
+        val updateFolderStyles = {
+            val onlineSelected = selectedChannelCategory == "ONLINE"
+            val offlineSelected = selectedChannelCategory == "OFFLINE"
+            val cyan = Color.rgb(0, 245, 255)
+            val magenta = Color.rgb(255, 54, 209)
+            val muted = Color.rgb(145, 160, 175)
+
+            onlineFolder.setTextColor(if (onlineSelected) cyan else muted)
+            onlineFolder.background =
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(9).toFloat()
+                    setColor(if (onlineSelected) Color.rgb(5, 30, 42)
+                             else Color.rgb(17, 24, 36))
+                    setStroke(dp(1), if (onlineSelected) cyan
+                                     else Color.rgb(55, 65, 80))
+                }
+
+            offlineFolder.setTextColor(if (offlineSelected) magenta else muted)
+            offlineFolder.background =
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(9).toFloat()
+                    setColor(if (offlineSelected) Color.rgb(38, 13, 42)
+                             else Color.rgb(17, 24, 36))
+                    setStroke(dp(1), if (offlineSelected) magenta
+                                     else Color.rgb(55, 65, 80))
+                }
+        }
+
+        onlineFolder.setOnClickListener {
+            selectedChannelCategory = "ONLINE"
+            updateFolderStyles()
+            renderChannelGrid(playlistChannels)
+        }
+
+        offlineFolder.setOnClickListener {
+            selectedChannelCategory = "OFFLINE"
+            updateFolderStyles()
+            renderChannelGrid(playlistChannels)
+        }
+
+        channelCategoryRow.addView(
+            onlineFolder,
+            LinearLayout.LayoutParams(0, dp(36), 1f).apply {
+                marginEnd = dp(6)
+            }
+        )
+        channelCategoryRow.addView(
+            offlineFolder,
+            LinearLayout.LayoutParams(0, dp(36), 1f)
+        )
+        updateFolderStyles()
+
         val landscapeLayout =
             resources.configuration.orientation ==
                 android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -791,6 +873,13 @@ class MainActivity : Activity() {
             }
             channelSide.addView(
                 settingsPanel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            channelSide.addView(
+                channelCategoryRow,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
@@ -824,6 +913,13 @@ class MainActivity : Activity() {
             )
             mainContent.addView(
                 settingsPanel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+            mainContent.addView(
+                channelCategoryRow,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
@@ -943,8 +1039,13 @@ class MainActivity : Activity() {
             else -> "MEMERIKSA"
         }
 
+        val previousStatus = channelUrlStatuses[url]
         channelUrlStatuses[url] = normalized
         channelUrlDetails[url] = detail
+
+        if (normalized != "MEMERIKSA" && previousStatus != normalized) {
+            scheduleChannelCategoryRefresh()
+        }
 
         val neonColor = when (normalized) {
             "ONLINE" -> Color.rgb(0, 245, 255)   // Cyan neon
@@ -990,6 +1091,21 @@ class MainActivity : Activity() {
                     }
             }
         }
+    }
+
+    private fun scheduleChannelCategoryRefresh() {
+        if (channelCategoryRefreshRunnable != null) return
+
+        val task = Runnable {
+            channelCategoryRefreshRunnable = null
+            if (!isFinishing && !isDestroyed &&
+                ::channelGrid.isInitialized && playlistChannels.isNotEmpty()) {
+                renderChannelGrid(playlistChannels)
+            }
+        }
+
+        channelCategoryRefreshRunnable = task
+        controlsHandler.postDelayed(task, 650L)
     }
 
     private fun checkChannelUrl(entry: PlaylistEntry): Pair<String, String> {
@@ -1115,7 +1231,50 @@ class MainActivity : Activity() {
             dp((screenWidthDp - 24).coerceAtLeast(240))
         }
 
-        channels.forEachIndexed { index, entry ->
+        val visibleChannels = channels.filter { entry ->
+            channelUrlStatuses[entry.url] == selectedChannelCategory
+        }
+
+        if (visibleChannels.isEmpty()) {
+            val pending = channels.any { entry ->
+                (channelUrlStatuses[entry.url] ?: "MEMERIKSA") == "MEMERIKSA"
+            }
+
+            val emptyMessage = TextView(this).apply {
+                text = when {
+                    pending -> "Sedang memeriksa URL..."
+                    selectedChannelCategory == "ONLINE" ->
+                        "Belum ada URL ONLINE yang terdeteksi."
+                    else -> "Belum ada URL OFFLINE yang terdeteksi."
+                }
+                textSize = 12f
+                setTextColor(
+                    if (selectedChannelCategory == "ONLINE")
+                        Color.rgb(0, 245, 255)
+                    else
+                        Color.rgb(255, 54, 209)
+                )
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(14), dp(8), dp(14))
+            }
+
+            channelGrid.addView(
+                emptyMessage,
+                GridLayout.LayoutParams().apply {
+                    width = cardWidth
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    setMargins(dp(3), dp(3), dp(3), dp(3))
+                }
+            )
+            return
+        }
+
+        visibleChannels.forEach { entry ->
+            val index = playlistChannels.indexOf(entry)
+                .takeIf { it >= 0 }
+                ?: playlistChannels.indexOfFirst { it.url == entry.url }
+
+            if (index < 0) return@forEach
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
