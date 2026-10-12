@@ -2357,6 +2357,12 @@ class MainActivity : Activity() {
 
                 val finalUrl = connection.url.toString()
                 val channels = parsePlaylist(text, finalUrl)
+                    .filterNot {
+                        it.name.trim().equals(
+                            "001 TRAKTIR KOPI",
+                            ignoreCase = true
+                        )
+                    }
 
                 runOnUiThread {
                     swipeRefreshLayout.isRefreshing = false
