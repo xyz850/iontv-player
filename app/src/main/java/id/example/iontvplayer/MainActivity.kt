@@ -561,19 +561,6 @@ class MainActivity : Activity() {
 
 
 
-        addNeonControl(
-            "↻", "refresh", "Muat ulang stream saat ini"
-        ) {
-            val exo = player
-            if (exo != null && exo.currentMediaItem != null) {
-                status.text = "Memuat ulang stream..."
-                exo.seekToDefaultPosition()
-                exo.prepare()
-                exo.playWhenReady = true
-            } else {
-                playStream()
-            }
-        }
 
 
         fun addSpinnerControl(label: String, spinner: Spinner, width: Int) {
@@ -1325,6 +1312,27 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
 
+        val bottomRefreshButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Muat ulang stream saat ini"
+            setImageResource(R.drawable.ic_refresh)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            setOnClickListener {
+                val exo = player
+                if (exo != null && exo.currentMediaItem != null) {
+                    status.text = "Memuat ulang stream..."
+                    exo.seekToDefaultPosition()
+                    exo.prepare()
+                    exo.playWhenReady = true
+                } else {
+                    playStream()
+                }
+            }
+        }
+
         val bottomExitButton = android.widget.ImageButton(this).apply {
             contentDescription = "Keluar dari aplikasi"
             setImageResource(R.drawable.ic_power)
@@ -1337,6 +1345,13 @@ class MainActivity : Activity() {
                 finish()
             }
         }
+
+        bottomExitBar.addView(
+            bottomRefreshButton,
+            LinearLayout.LayoutParams(dp(42), dp(38)).apply {
+                marginEnd = dp(10)
+            }
+        )
 
         bottomExitBar.addView(
             bottomExitButton,
