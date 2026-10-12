@@ -2328,7 +2328,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadPlaylist(url: String, headers: Map<String, String>) {
-        status.text = "Mengunduh dan membaca playlist…"
+        status.text = ""
 
         Thread {
             var connection: java.net.HttpURLConnection? = null
