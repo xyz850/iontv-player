@@ -496,6 +496,7 @@ class MainActivity : Activity() {
         controlsRow.addView(brightnessColumn, LinearLayout.LayoutParams(
             dp(112), dp(44)
         ))
+        brightnessColumn.visibility = View.GONE
 
         urlInput = field("URL playlist atau stream", "https://bit.ly/KPL203")
         refererInput = field("Referer (opsional)", "")
@@ -1002,7 +1003,7 @@ class MainActivity : Activity() {
             }
         }
         hideControlsRunnable = task
-        controlsHandler.postDelayed(task, 4000L)
+        controlsHandler.postDelayed(task, 3000L)
     }
 
     private fun showPlaybackControls() {
@@ -1098,11 +1099,10 @@ class MainActivity : Activity() {
                 }
             }
 
-            val exitButton = makeButton("✕", "Keluar dari layar penuh")
-            toolbar.addView(
-                exitButton,
-                LinearLayout.LayoutParams(dp(48), dp(44))
-            )
+            val exitButton = makeButton("⏻", "Keluar dari layar penuh").apply {
+                textSize = 19f
+            }
+            exitButton.setTextColor(accent)
             exitButton.setOnClickListener { toggleFullscreen() }
 
             val playButton = makeButton("▶", "Putar atau jeda")
@@ -1288,14 +1288,45 @@ class MainActivity : Activity() {
                 setPadding(0, 0, 0, 0)
             }
 
-            // Isi ruang kosong di ujung kanan bilah fullscreen.
+            // Kelompok tombol kanan: ukuran, refresh, keluar fullscreen.
+            val refreshFullscreenButton = makeButton(
+                "↻", "Muat ulang stream saat ini"
+            ).apply {
+                textSize = 20f
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(0, 0, 0, 0)
+            }
+
+            refreshFullscreenButton.setOnClickListener {
+                val exo = player
+                if (exo != null && exo.currentMediaItem != null) {
+                    status.text = "Memuat ulang stream..."
+                    exo.seekToDefaultPosition()
+                    exo.prepare()
+                    exo.playWhenReady = true
+                } else {
+                    playStream()
+                }
+                scheduleControlsAutoHide()
+            }
+
+            // Ruang fleksibel memisahkan tombol playback dari toolbar kanan.
             toolbar.addView(
                 View(this),
                 LinearLayout.LayoutParams(0, dp(1), 1f)
             )
             toolbar.addView(
                 sizeToggle,
-                LinearLayout.LayoutParams(dp(44), dp(44))
+                LinearLayout.LayoutParams(dp(40), dp(44))
+            )
+            toolbar.addView(
+                refreshFullscreenButton,
+                LinearLayout.LayoutParams(dp(40), dp(44))
+            )
+            toolbar.addView(
+                exitButton,
+                LinearLayout.LayoutParams(dp(40), dp(44))
             )
 
             // Menu pilihan muncul tepat di bawah bilah tombol.
@@ -1335,7 +1366,15 @@ class MainActivity : Activity() {
                     android.media.AudioManager.STREAM_MUSIC
                 )
                 rotation = -90f
-                translationX = -dp(54).toFloat()
+                progressTintList =
+                    android.content.res.ColorStateList.valueOf(accent)
+                thumbTintList =
+                    android.content.res.ColorStateList.valueOf(accent)
+                progressBackgroundTintList =
+                    android.content.res.ColorStateList.valueOf(
+                        Color.argb(85, 0, 220, 255)
+                    )
+                alpha = 0.92f
                 contentDescription = "Volume vertikal"
             }
 
@@ -1361,7 +1400,7 @@ class MainActivity : Activity() {
             fullscreenControls.addView(
                 volumeSlider,
                 FrameLayout.LayoutParams(
-                    dp(180), dp(40),
+                    dp(140), dp(32),
                     Gravity.START or Gravity.CENTER_VERTICAL
                 )
             )
@@ -1392,7 +1431,15 @@ class MainActivity : Activity() {
                     50
                 }
                 rotation = -90f
-                translationX = dp(54).toFloat()
+                progressTintList =
+                    android.content.res.ColorStateList.valueOf(accent)
+                thumbTintList =
+                    android.content.res.ColorStateList.valueOf(accent)
+                progressBackgroundTintList =
+                    android.content.res.ColorStateList.valueOf(
+                        Color.argb(85, 0, 220, 255)
+                    )
+                alpha = 0.92f
                 contentDescription = "Kecerahan vertikal"
             }
 
@@ -1417,7 +1464,7 @@ class MainActivity : Activity() {
             fullscreenControls.addView(
                 brightnessSlider,
                 FrameLayout.LayoutParams(
-                    dp(180), dp(40),
+                    dp(140), dp(32),
                     Gravity.END or Gravity.CENTER_VERTICAL
                 )
             )
