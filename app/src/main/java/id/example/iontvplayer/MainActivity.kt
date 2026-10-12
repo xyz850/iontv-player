@@ -56,6 +56,18 @@ class MainActivity : Activity() {
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
 
+    private val channelUrlStatuses = mutableMapOf<String, String>()
+    private val channelUrlDetails = mutableMapOf<String, String>()
+    private val channelUrlStatusViews =
+        mutableMapOf<String, MutableList<TextView>>()
+
+    private var playlistRequestHeaders: Map<String, String> = emptyMap()
+    private var urlScanInProgress = false
+    private var urlMonitorRunnable: Runnable? = null
+
+    private val urlCheckExecutor =
+        java.util.concurrent.Executors.newFixedThreadPool(12)
+
     private val appPrefs by lazy {
         getSharedPreferences("iontv_settings", MODE_PRIVATE)
     }
@@ -904,8 +916,155 @@ class MainActivity : Activity() {
     }
 
 
+    private fun updateChannelUrlStatus(
+        url: String,
+        state: String,
+        detail: String = ""
+    ) {
+        val normalized = when (state) {
+            "ONLINE", "OFFLINE" -> state
+            else -> "MEMERIKSA"
+        }
+
+        channelUrlStatuses[url] = normalized
+        channelUrlDetails[url] = detail
+
+        val textColor = when (normalized) {
+            "ONLINE" -> Color.rgb(0, 230, 118)
+            "OFFLINE" -> Color.rgb(255, 82, 82)
+            else -> Color.rgb(255, 215, 64)
+        }
+        val fillColor = when (normalized) {
+            "ONLINE" -> Color.rgb(8, 48, 35)
+            "OFFLINE" -> Color.rgb(55, 20, 28)
+            else -> Color.rgb(52, 43, 14)
+        }
+
+        channelUrlStatusViews[url]?.forEach { badge ->
+            badge.text = normalized
+            badge.setTextColor(textColor)
+            badge.background =
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(5).toFloat()
+                    setColor(fillColor)
+                }
+            badge.contentDescription =
+                "Status URL $normalized" +
+                    if (detail.isBlank()) "" else ": $detail"
+        }
+    }
+
+    private fun checkChannelUrl(entry: PlaylistEntry): Pair<String, String> {
+        var connection: java.net.HttpURLConnection? = null
+
+        return try {
+            connection = (java.net.URL(entry.url).openConnection()
+                as java.net.HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 3500
+                readTimeout = 3500
+                requestMethod = "GET"
+                setRequestProperty("Accept", "*/*")
+                setRequestProperty("Range", "bytes=0-0")
+
+                val headers = linkedMapOf<String, String>()
+                headers.putAll(playlistRequestHeaders)
+                headers.putAll(entry.headers)
+
+                if (headers.keys.none {
+                        it.equals("User-Agent", ignoreCase = true)
+                    }) {
+                    setRequestProperty(
+                        "User-Agent",
+                        "Mozilla/5.0 (Android) IONTVPlayer"
+                    )
+                }
+
+                headers.forEach { (name, value) ->
+                    setRequestProperty(name, value)
+                }
+            }
+
+            val code = connection.responseCode
+            if (code in 200..399 || code == 416) {
+                "ONLINE" to "HTTP $code"
+            } else {
+                "OFFLINE" to "HTTP $code"
+            }
+        } catch (e: Exception) {
+            "OFFLINE" to (e.message ?: e.javaClass.simpleName)
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    private fun scanPlaylistUrls() {
+        if (urlScanInProgress || playlistChannels.isEmpty()) return
+
+        val entries = playlistChannels.distinctBy { it.url }
+        if (entries.isEmpty()) return
+
+        urlScanInProgress = true
+
+        entries.forEach { entry ->
+            updateChannelUrlStatus(
+                entry.url,
+                "MEMERIKSA",
+                "Pemeriksaan URL sedang berjalan"
+            )
+        }
+
+        val remaining =
+            java.util.concurrent.atomic.AtomicInteger(entries.size)
+
+        entries.forEach { entry ->
+            try {
+                urlCheckExecutor.execute {
+                    val result = checkChannelUrl(entry)
+
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed &&
+                            playlistChannels.any { it.url == entry.url }) {
+                            updateChannelUrlStatus(
+                                entry.url,
+                                result.first,
+                                result.second
+                            )
+                        }
+
+                        if (remaining.decrementAndGet() == 0) {
+                            urlScanInProgress = false
+                        }
+                    }
+                }
+            } catch (_: java.util.concurrent.RejectedExecutionException) {
+                if (remaining.decrementAndGet() == 0) {
+                    urlScanInProgress = false
+                }
+            }
+        }
+    }
+
+    private fun startUrlMonitoring() {
+        urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
+
+        val task = object : Runnable {
+            override fun run() {
+                if (isFinishing || isDestroyed) return
+
+                scanPlaylistUrls()
+                controlsHandler.postDelayed(this, 5 * 60 * 1000L)
+            }
+        }
+
+        urlMonitorRunnable = task
+        controlsHandler.post(task)
+    }
+
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
         channelGrid.removeAllViews()
+        channelUrlStatusViews.clear()
         channelGrid.columnCount = 1
 
         val screenWidthDp = resources.configuration.screenWidthDp
@@ -961,30 +1120,24 @@ class MainActivity : Activity() {
                 )
             )
 
-            // Status perkiraan dari nama: item VOD tidak diberi label LIVE.
-            val lowerName = entry.name.lowercase()
-            val showLive = listOf(
-                "vod", "movie", "film", "series", "episode",
-                "trailer", "replay", "catch-up", "catchup", "on demand"
-            ).none { lowerName.contains(it) }
-
-            if (showLive) {
-                val liveBadge = TextView(this).apply {
-                    text = "LIVE"
-                    textSize = 10f
-                    setTextColor(Color.WHITE)
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                    gravity = Gravity.CENTER
-                    setPadding(dp(8), dp(5), dp(8), dp(5))
-                    background = android.graphics.drawable.GradientDrawable().apply {
-                        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                        cornerRadius = dp(5).toFloat()
-                        setColor(0xFFE53935.toInt())
-                    }
-                    contentDescription = "Perkiraan channel live"
-                }
-                card.addView(liveBadge)
+            val statusBadge = TextView(this).apply {
+                textSize = 9f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setPadding(dp(6), dp(5), dp(6), dp(5))
+                isSingleLine = true
             }
+            card.addView(statusBadge)
+
+            channelUrlStatusViews.getOrPut(entry.url) {
+                mutableListOf()
+            }.add(statusBadge)
+
+            updateChannelUrlStatus(
+                entry.url,
+                channelUrlStatuses[entry.url] ?: "MEMERIKSA",
+                channelUrlDetails[entry.url] ?: "Menunggu pemeriksaan"
+            )
 
             val playSelectedChannel = {
                 channelSpinner.setSelection(index)
@@ -1882,6 +2035,7 @@ class MainActivity : Activity() {
                             "Playlist tidak berisi channel yang dikenali. Periksa format M3U."
                     } else {
                         loadedPlaylistUrl = url
+                        playlistRequestHeaders = headers.toMap()
                         playlistChannels = channels
                         renderChannelGrid(channels)
                         channelSpinner.adapter = ArrayAdapter(
@@ -1892,6 +2046,7 @@ class MainActivity : Activity() {
                         channelSpinner.setSelection(0)
                         status.text =
                             "Playlist dimuat: ${channels.size} channel. Ketuk channel untuk memutar."
+                        startUrlMonitoring()
                     }
                 }
             } catch (e: Exception) {
@@ -2299,6 +2454,11 @@ class MainActivity : Activity() {
                         }
 
                         override fun onRenderedFirstFrame() {
+                            updateChannelUrlStatus(
+                                url,
+                                "ONLINE",
+                                "Gambar berhasil ditampilkan"
+                            )
                             diagnosticStatus.text = "Gambar berhasil ditampilkan."
                             android.util.Log.d(
                                 "IONTVPlayer",
@@ -2316,6 +2476,29 @@ class MainActivity : Activity() {
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
+                            var causeForUrlStatus: Throwable? = error
+                            var serverUnavailable = false
+
+                            while (causeForUrlStatus != null) {
+                                if (causeForUrlStatus is
+                                    androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
+                                ) {
+                                    val code = causeForUrlStatus.responseCode
+                                    if (code == 404 || code == 410 || code >= 500) {
+                                        serverUnavailable = true
+                                    }
+                                }
+                                causeForUrlStatus = causeForUrlStatus.cause
+                            }
+
+                            if (serverUnavailable) {
+                                updateChannelUrlStatus(
+                                    url,
+                                    "OFFLINE",
+                                    "Server mengembalikan error HTTP"
+                                )
+                            }
+
                             val causes = mutableListOf<String>()
                             var e: Throwable? = error
                             while (e != null && causes.size < 8) {
@@ -2395,6 +2578,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
+        urlCheckExecutor.shutdownNow()
         releasePlayer()
         super.onDestroy()
     }
