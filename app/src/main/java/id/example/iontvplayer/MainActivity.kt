@@ -352,7 +352,7 @@ class MainActivity : Activity() {
         }
 
         playerView = PlayerView(this).apply {
-            useController = true
+            useController = false
             controllerShowTimeoutMs = 4000
             setBackgroundColor(Color.BLACK)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
