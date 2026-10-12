@@ -812,15 +812,6 @@ class MainActivity : Activity() {
             }
         }
 
-        // Roda gigi diletakkan tepat di bawah video.
-        val gearRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
-            addView(
-                gearButton,
-                LinearLayout.LayoutParams(dp(40), dp(40))
-            )
-        }
 
         val channelContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1047,6 +1038,19 @@ class MainActivity : Activity() {
             )
         )
 
+        // Roda gigi Cyber Neon mengambang di dalam video.
+        videoContainer.addView(
+            gearButton,
+            FrameLayout.LayoutParams(
+                dp(40),
+                dp(40),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(8)
+                bottomMargin = dp(8)
+            }
+        )
+
         val landscapeLayout =
             resources.configuration.orientation ==
                 android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -1088,12 +1092,6 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
                 )
             )
-            videoSide.addView(
-                gearRow,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
-                )
-            )
 
             mainContent.addView(
                 channelSide,
@@ -1116,12 +1114,6 @@ class MainActivity : Activity() {
                 ).apply {
                     bottomMargin = dp(2)
                 }
-            )
-            mainContent.addView(
-                gearRow,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
-                )
             )
             mainContent.addView(
                 channelCategoryRow,
