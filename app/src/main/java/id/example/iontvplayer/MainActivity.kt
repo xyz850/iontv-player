@@ -1144,7 +1144,7 @@ class MainActivity : Activity() {
         addControl(volumeNeonButton, 40)
         addControl(brightnessNeonButton, 40)
 
-        // Tombol resolusi selalu terlihat di sebelah kanan roda gigi.
+        // Tombol resolusi tetap di kiri bawah area video.
         videoContainer.addView(
             resolutionButton,
             FrameLayout.LayoutParams(
@@ -1152,7 +1152,7 @@ class MainActivity : Activity() {
                 dp(32),
                 Gravity.BOTTOM or Gravity.START
             ).apply {
-                leftMargin = dp(44)
+                leftMargin = dp(8)
                 bottomMargin = dp(8)
             }
         )
@@ -1249,10 +1249,17 @@ class MainActivity : Activity() {
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
         }
 
-        // Roda gigi tunggal di kiri bawah layar utama.
-        bottomExitBar.addView(
+        // Roda gigi tunggal di pojok kanan bawah area video.
+        videoContainer.addView(
             gearButton,
-            LinearLayout.LayoutParams(dp(32), dp(32))
+            FrameLayout.LayoutParams(
+                dp(32),
+                dp(32),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(8)
+                bottomMargin = dp(8)
+            }
         )
 
         // Ruang fleksibel menjaga tombol refresh dan keluar di sisi kanan.
