@@ -800,11 +800,23 @@ class MainActivity : Activity() {
             contentDescription = "Tampilkan URL OFFLINE"
         }
 
+        val checkingFolder = TextView(this).apply {
+            text = "MEMERIKSA"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Tampilkan URL MEMERIKSA"
+        }
+
         val updateFolderStyles = {
             val onlineSelected = selectedChannelCategory == "ONLINE"
             val offlineSelected = selectedChannelCategory == "OFFLINE"
+            val checkingSelected = selectedChannelCategory == "MEMERIKSA"
             val cyan = Color.rgb(0, 245, 255)
             val magenta = Color.rgb(255, 54, 209)
+            val blueNeon = Color.rgb(75, 160, 255)
             val muted = Color.rgb(145, 160, 175)
 
             onlineFolder.setTextColor(if (onlineSelected) cyan else muted)
@@ -828,6 +840,17 @@ class MainActivity : Activity() {
                     setStroke(dp(1), if (offlineSelected) magenta
                                      else Color.rgb(55, 65, 80))
                 }
+
+            checkingFolder.setTextColor(if (checkingSelected) blueNeon else muted)
+            checkingFolder.background =
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(9).toFloat()
+                    setColor(if (checkingSelected) Color.rgb(9, 24, 48)
+                             else Color.rgb(17, 24, 36))
+                    setStroke(dp(1), if (checkingSelected) blueNeon
+                                     else Color.rgb(55, 65, 80))
+                }
         }
 
         onlineFolder.setOnClickListener {
@@ -842,14 +865,26 @@ class MainActivity : Activity() {
             renderChannelGrid(playlistChannels)
         }
 
+        checkingFolder.setOnClickListener {
+            selectedChannelCategory = "MEMERIKSA"
+            updateFolderStyles()
+            renderChannelGrid(playlistChannels)
+        }
+
         channelCategoryRow.addView(
             onlineFolder,
             LinearLayout.LayoutParams(0, dp(36), 1f).apply {
-                marginEnd = dp(6)
+                marginEnd = dp(4)
             }
         )
         channelCategoryRow.addView(
             offlineFolder,
+            LinearLayout.LayoutParams(0, dp(36), 1f).apply {
+                marginEnd = dp(4)
+            }
+        )
+        channelCategoryRow.addView(
+            checkingFolder,
             LinearLayout.LayoutParams(0, dp(36), 1f)
         )
         updateFolderStyles()
@@ -1168,6 +1203,9 @@ class MainActivity : Activity() {
             )
         }
 
+        // Segarkan kategori agar URL yang sedang diperiksa langsung terlihat.
+        scheduleChannelCategoryRefresh()
+
         val remaining =
             java.util.concurrent.atomic.AtomicInteger(entries.size)
 
@@ -1232,7 +1270,7 @@ class MainActivity : Activity() {
         }
 
         val visibleChannels = channels.filter { entry ->
-            channelUrlStatuses[entry.url] == selectedChannelCategory
+            (channelUrlStatuses[entry.url] ?: "MEMERIKSA") == selectedChannelCategory
         }
 
         if (visibleChannels.isEmpty()) {
@@ -1242,17 +1280,24 @@ class MainActivity : Activity() {
 
             val emptyMessage = TextView(this).apply {
                 text = when {
-                    pending -> "Sedang memeriksa URL..."
+                    selectedChannelCategory == "MEMERIKSA" && pending ->
+                        "URL sedang diperiksa..."
+                    selectedChannelCategory == "MEMERIKSA" ->
+                        "Tidak ada URL yang sedang diperiksa."
+                    pending ->
+                        "Sedang memeriksa URL..."
                     selectedChannelCategory == "ONLINE" ->
                         "Belum ada URL ONLINE yang terdeteksi."
-                    else -> "Belum ada URL OFFLINE yang terdeteksi."
+                    else ->
+                        "Belum ada URL OFFLINE yang terdeteksi."
                 }
                 textSize = 12f
                 setTextColor(
-                    if (selectedChannelCategory == "ONLINE")
-                        Color.rgb(0, 245, 255)
-                    else
-                        Color.rgb(255, 54, 209)
+                    when (selectedChannelCategory) {
+                        "ONLINE" -> Color.rgb(0, 245, 255)
+                        "OFFLINE" -> Color.rgb(255, 54, 209)
+                        else -> Color.rgb(75, 160, 255)
+                    }
                 )
                 gravity = Gravity.CENTER
                 setPadding(dp(8), dp(14), dp(8), dp(14))
