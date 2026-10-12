@@ -1150,9 +1150,9 @@ class MainActivity : Activity() {
             FrameLayout.LayoutParams(
                 dp(32),
                 dp(32),
-                Gravity.BOTTOM or Gravity.START
+                Gravity.BOTTOM or Gravity.END
             ).apply {
-                leftMargin = dp(8)
+                rightMargin = dp(48)
                 bottomMargin = dp(8)
             }
         )
