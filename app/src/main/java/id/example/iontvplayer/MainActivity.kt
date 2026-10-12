@@ -2370,6 +2370,12 @@ class MainActivity : Activity() {
                 )
             )
 
+            // Sembunyikan slider dan ikon volume/kecerahan di fullscreen.
+            volumeSlider.visibility = View.GONE
+            volumeLabel.visibility = View.GONE
+            brightnessSlider.visibility = View.GONE
+            brightnessLabel.visibility = View.GONE
+
             fullscreenContainer.addView(
                 fullscreenControls,
                 FrameLayout.LayoutParams(
