@@ -38,14 +38,12 @@ class MainActivity : Activity() {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
     private lateinit var videoContainer: FrameLayout
-    private lateinit var playbackSeekBar: SeekBar
-    private lateinit var playbackPositionText: TextView
-    private lateinit var playbackDurationText: TextView
-    private var userSeekingPlayback = false
-    private val seekUpdateRunnable = object : Runnable {
+    private lateinit var liveIndicator: LinearLayout
+    private lateinit var liveIndicatorDot: View
+    private val liveIndicatorRunnable = object : Runnable {
         override fun run() {
-            updatePlaybackSeekBar()
-            controlsHandler.postDelayed(this, 500L)
+            updateLiveIndicator()
+            controlsHandler.postDelayed(this, 1000L)
         }
     }
     private lateinit var urlInput: EditText
@@ -379,91 +377,57 @@ class MainActivity : Activity() {
             )
         }
 
-        playbackPositionText = TextView(this).apply {
-            text = "00:00"
-            setTextColor(Color.CYAN)
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setSingleLine(true)
-        }
-        playbackDurationText = TextView(this).apply {
-            text = "--:--"
-            setTextColor(Color.CYAN)
-            textSize = 10f
-            gravity = Gravity.CENTER
-            setSingleLine(true)
-        }
-        playbackSeekBar = SeekBar(this).apply {
-            max = 1000
-            isEnabled = false
-            setPadding(0, 0, 0, 0)
-            progressTintList =
-                android.content.res.ColorStateList.valueOf(Color.CYAN)
-            thumbTintList =
-                android.content.res.ColorStateList.valueOf(Color.CYAN)
-            progressBackgroundTintList =
-                android.content.res.ColorStateList.valueOf(Color.argb(110, 0, 220, 255))
-        }
-
-        playbackSeekBar.setOnSeekBarChangeListener(
-            object : SeekBar.OnSeekBarChangeListener {
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                    userSeekingPlayback = true
-                }
-
-                override fun onProgressChanged(
-                    seekBar: SeekBar?, progress: Int, fromUser: Boolean
-                ) {
-                    if (!fromUser) return
-                    val duration = player?.duration ?: C.TIME_UNSET
-                    if (duration > 0 && duration != C.TIME_UNSET) {
-                        playbackPositionText.text = formatPlaybackTime(
-                            duration * progress.toLong() / playbackSeekBar.max
-                        )
-                    }
-                }
-
-                override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                    val exo = player
-                    val duration = exo?.duration ?: C.TIME_UNSET
-                    if (exo != null && duration > 0 && duration != C.TIME_UNSET) {
-                        exo.seekTo(
-                            duration * playbackSeekBar.progress.toLong() /
-                                playbackSeekBar.max
-                        )
-                    }
-                    userSeekingPlayback = false
-                    updatePlaybackSeekBar()
-                }
+        liveIndicatorDot = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(Color.rgb(0, 245, 255))
             }
-        )
+        }
 
-        val playbackBar = LinearLayout(this).apply {
+        val liveLabel = TextView(this).apply {
+            text = "SIARAN LANGSUNG"
+            setTextColor(Color.rgb(0, 245, 255))
+            textSize = 10f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            gravity = Gravity.CENTER_VERTICAL
+            letterSpacing = 0.04f
+        }
+
+        liveIndicator = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), 0, dp(8), 0)
-            setBackgroundColor(Color.argb(220, 3, 12, 30))
+            setPadding(dp(10), dp(3), dp(12), dp(3))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.argb(215, 3, 12, 30))
+                setStroke(dp(1), Color.rgb(0, 180, 210))
+                cornerRadius = dp(14).toFloat()
+            }
             addView(
-                playbackPositionText,
-                LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.MATCH_PARENT)
+                liveIndicatorDot,
+                LinearLayout.LayoutParams(dp(8), dp(8))
             )
             addView(
-                playbackSeekBar,
-                LinearLayout.LayoutParams(0, dp(30), 1f)
+                liveLabel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginStart = dp(6)
+                }
             )
-            addView(
-                playbackDurationText,
-                LinearLayout.LayoutParams(dp(48), ViewGroup.LayoutParams.MATCH_PARENT)
-            )
+            visibility = View.GONE
         }
 
         videoContainer.addView(
-            playbackBar,
+            liveIndicator,
             FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(42),
-                Gravity.BOTTOM
-            )
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(28),
+                Gravity.BOTTOM or Gravity.START
+            ).apply {
+                leftMargin = dp(8)
+                bottomMargin = dp(8)
+            }
         )
 
         val settingsPanel = LinearLayout(this).apply {
@@ -3004,8 +2968,8 @@ class MainActivity : Activity() {
                         }
                     })
                     exo.prepare()
-                    controlsHandler.removeCallbacks(seekUpdateRunnable)
-                    controlsHandler.post(seekUpdateRunnable)
+                    controlsHandler.removeCallbacks(liveIndicatorRunnable)
+                    controlsHandler.post(liveIndicatorRunnable)
                     exo.playWhenReady = true
                 }
         } catch (e: Exception) {
@@ -3053,57 +3017,30 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun updatePlaybackSeekBar() {
-        if (!::playbackSeekBar.isInitialized) return
+    private fun updateLiveIndicator() {
+        if (!::liveIndicator.isInitialized) return
 
-        val exo = player
-        if (exo == null) {
-            playbackSeekBar.isEnabled = false
-            playbackDurationText.text = "--:--"
-            playbackPositionText.text = "00:00"
-            if (!userSeekingPlayback) playbackSeekBar.progress = 0
-            return
-        }
+        val isLive = player?.isCurrentMediaItemLive == true
+        liveIndicator.visibility = if (isLive) View.VISIBLE else View.GONE
 
-        val duration = exo.duration
-        val canSeek = duration > 0 && duration != C.TIME_UNSET
-        playbackSeekBar.isEnabled = canSeek
-        playbackDurationText.text =
-            if (canSeek) formatPlaybackTime(duration) else "LIVE"
-
-        if (!userSeekingPlayback) {
-            playbackPositionText.text = formatPlaybackTime(exo.currentPosition)
-            playbackSeekBar.progress = if (canSeek) {
-                (exo.currentPosition.coerceAtLeast(0L) *
-                    playbackSeekBar.max / duration)
-                    .toInt().coerceIn(0, playbackSeekBar.max)
-            } else {
-                0
+        if (isLive) {
+            if (liveIndicatorDot.animation == null) {
+                liveIndicatorDot.startAnimation(
+                    android.view.animation.AlphaAnimation(0.2f, 1.0f).apply {
+                        duration = 650L
+                        repeatMode = android.view.animation.Animation.REVERSE
+                        repeatCount = android.view.animation.Animation.INFINITE
+                    }
+                )
             }
-        }
-    }
-
-    private fun formatPlaybackTime(milliseconds: Long): String {
-        val seconds = milliseconds.coerceAtLeast(0L) / 1000L
-        val hours = seconds / 3600L
-        val minutes = (seconds % 3600L) / 60L
-        val secs = seconds % 60L
-
-        return if (hours > 0L) {
-            String.format(
-                java.util.Locale.ROOT, "%02d:%02d:%02d",
-                hours, minutes, secs
-            )
         } else {
-            String.format(
-                java.util.Locale.ROOT, "%02d:%02d",
-                minutes, secs
-            )
+            liveIndicatorDot.clearAnimation()
+            liveIndicatorDot.alpha = 1f
         }
     }
 
     private fun releasePlayer() {
-        controlsHandler.removeCallbacks(seekUpdateRunnable)
+        controlsHandler.removeCallbacks(liveIndicatorRunnable)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (::playerView.isInitialized) playerView.player = null
         player?.release()
@@ -3126,7 +3063,7 @@ class MainActivity : Activity() {
         splashAnimator?.cancel()
         splashAnimator = null
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
-        controlsHandler.removeCallbacks(seekUpdateRunnable)
+        controlsHandler.removeCallbacks(liveIndicatorRunnable)
         channelUrlBlinkRunnable?.let {
             controlsHandler.removeCallbacks(it)
         }
