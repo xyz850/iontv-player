@@ -729,7 +729,36 @@ class MainActivity : Activity() {
         buttons.addView(stop, LinearLayout.LayoutParams(0, dp(40), 1f))
         sourcePanel.addView(buttons)
 
-        settingsPanel.visibility = View.VISIBLE
+        // Panel kontrol tambahan dibuka melalui roda gigi.
+        settingsPanel.visibility = View.GONE
+
+        val gearButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Buka pengaturan video"
+            setImageResource(android.R.drawable.ic_menu_manage)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setOnClickListener {
+                settingsPanel.visibility =
+                    if (settingsPanel.visibility == View.VISIBLE) {
+                        View.GONE
+                    } else {
+                        View.VISIBLE
+                    }
+            }
+        }
+
+        // Roda gigi diletakkan tepat di bawah video.
+        val gearRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            addView(
+                gearButton,
+                LinearLayout.LayoutParams(dp(40), dp(40))
+            )
+        }
 
         val channelContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -964,6 +993,12 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
             }
             channelSide.addView(
+                gearRow,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
+                )
+            )
+            channelSide.addView(
                 settingsPanel,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1002,6 +1037,12 @@ class MainActivity : Activity() {
                 ).apply {
                     bottomMargin = dp(4)
                 }
+            )
+            mainContent.addView(
+                gearRow,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
+                )
             )
             mainContent.addView(
                 settingsPanel,
