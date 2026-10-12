@@ -796,7 +796,7 @@ class MainActivity : Activity() {
 
         val gearButton = android.widget.ImageButton(this).apply {
             contentDescription = "Buka pengaturan video"
-            setImageResource(android.R.drawable.ic_menu_manage)
+            setImageResource(R.drawable.ic_settings_neon)
             imageTintList =
                 android.content.res.ColorStateList.valueOf(accent)
             setBackgroundColor(Color.TRANSPARENT)
