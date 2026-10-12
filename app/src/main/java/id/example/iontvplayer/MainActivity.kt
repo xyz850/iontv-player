@@ -92,6 +92,7 @@ class MainActivity : Activity() {
         val drmLicenseHeaders: Map<String, String> = emptyMap()
     )
 
+    private val fixedPlaylistUrl = "https://bit.ly/KPL203"
     private val bg = Color.rgb(5, 8, 18)
     private val panel = Color.rgb(16, 22, 36)
     private val accent = Color.rgb(0, 245, 255)
@@ -164,46 +165,37 @@ class MainActivity : Activity() {
     }
 
     private fun restoreSavedPlaylist() {
-        // Pulihkan URL tersimpan; gunakan nilai bawaan kolom jika belum ada.
-        val savedPlaylistUrl =
-            appPrefs.getString("playlist_url", null)
-                ?.trim()
-                .orEmpty()
-                .ifBlank { urlInput.text.toString().trim() }
+        // Sumber playlist ditetapkan oleh aplikasi, bukan URL yang tersimpan.
+        val savedPlaylistUrl = fixedPlaylistUrl
+        urlInput.setText(savedPlaylistUrl)
 
-        if (savedPlaylistUrl.isNotBlank()) {
-            if (urlInput.text.toString() != savedPlaylistUrl) {
-                urlInput.setText(savedPlaylistUrl)
-            }
+        appPrefs.edit()
+            .putString("playlist_url", savedPlaylistUrl)
+            .apply()
 
-            appPrefs.edit()
-                .putString("playlist_url", savedPlaylistUrl)
-                .apply()
+        urlInput.post {
+            refererInput.setText(appPrefs.getString("referer", "") ?: "")
+            originInput.setText(appPrefs.getString("origin", "") ?: "")
+            uaInput.setText(
+                appPrefs.getString(
+                    "user_agent",
+                    "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
+                ) ?: ""
+            )
 
-            urlInput.post {
-                refererInput.setText(appPrefs.getString("referer", "") ?: "")
-                originInput.setText(appPrefs.getString("origin", "") ?: "")
-                uaInput.setText(
-                    appPrefs.getString(
-                        "user_agent",
-                        "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"
-                    ) ?: ""
-                )
+            status.text = "Memuat daftar channel tersimpan…"
+            val headers = mutableMapOf<String, String>()
+            refererInput.text.toString().trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { headers["Referer"] = it }
+            originInput.text.toString().trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { headers["Origin"] = it }
+            uaInput.text.toString().trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let { headers["User-Agent"] = it }
 
-                status.text = "Memuat daftar channel tersimpan…"
-                val headers = mutableMapOf<String, String>()
-                refererInput.text.toString().trim()
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { headers["Referer"] = it }
-                originInput.text.toString().trim()
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { headers["Origin"] = it }
-                uaInput.text.toString().trim()
-                    .takeIf { it.isNotEmpty() }
-                    ?.let { headers["User-Agent"] = it }
-
-                loadPlaylist(savedPlaylistUrl, headers)
-            }
+            loadPlaylist(savedPlaylistUrl, headers)
         }
     }
 
@@ -705,7 +697,7 @@ class MainActivity : Activity() {
             )
             setOnRefreshListener {
                 val url = (loadedPlaylistUrl
-                    ?: urlInput.text.toString()).trim()
+                    ?: fixedPlaylistUrl).trim()
 
                 if (url.isBlank()) {
                     isRefreshing = false
@@ -1684,7 +1676,7 @@ class MainActivity : Activity() {
     }
 
     private fun playStream() {
-        val url = urlInput.text.toString().trim()
+        val url = fixedPlaylistUrl
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             status.text = "Masukkan URL HTTP/HTTPS yang valid."
             return
