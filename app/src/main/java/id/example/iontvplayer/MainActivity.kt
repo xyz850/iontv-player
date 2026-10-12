@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory
 import android.content.pm.ActivityInfo
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.*
@@ -975,6 +976,16 @@ class MainActivity : Activity() {
 
         updateFolderStyles()
 
+        // Panel pengaturan ditampilkan di dalam layar video.
+        videoContainer.addView(
+            settingsPanel,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP
+            )
+        )
+
         val landscapeLayout =
             resources.configuration.orientation ==
                 android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -988,23 +999,10 @@ class MainActivity : Activity() {
         }
 
         if (landscapeLayout) {
-            // Kontrol tetap di atas daftar channel pada sisi kiri.
+            // Daftar channel tetap di sisi kiri.
             val channelSide = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
             }
-            channelSide.addView(
-                gearRow,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
-                )
-            )
-            channelSide.addView(
-                settingsPanel,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            )
             channelSide.addView(
                 channelCategoryRow,
                 LinearLayout.LayoutParams(
@@ -1018,37 +1016,50 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
                 )
             )
+
+            // Video dan tombol pengaturan di sisi kanan.
+            val videoSide = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            videoSide.addView(
+                videoContainer,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+                )
+            )
+            videoSide.addView(
+                gearRow,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
+                )
+            )
+
             mainContent.addView(
                 channelSide,
-                LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.MATCH_PARENT, 0.42f)
+                LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 0.42f
+                )
             )
             mainContent.addView(
-                videoContainer,
-                LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.MATCH_PARENT, 0.58f)
+                videoSide,
+                LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.MATCH_PARENT, 0.58f
+                )
             )
         } else {
-            // Potret: video, kontrol, lalu daftar channel yang bisa digulir.
+            // Potret: video, tombol pengaturan, kategori, dan daftar channel.
             mainContent.addView(
                 videoContainer,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
                 ).apply {
-                    bottomMargin = dp(4)
+                    bottomMargin = dp(2)
                 }
             )
             mainContent.addView(
                 gearRow,
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(36)
-                )
-            )
-            mainContent.addView(
-                settingsPanel,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
                 )
             )
             mainContent.addView(
@@ -1625,8 +1636,6 @@ class MainActivity : Activity() {
         val task = Runnable {
             if (fullscreen) {
                 fullscreenControlsView?.visibility = View.GONE
-            } else {
-                settingsPanelView?.visibility = View.GONE
             }
             if (::playerView.isInitialized) {
                 playerView.hideController()
@@ -1639,9 +1648,8 @@ class MainActivity : Activity() {
     private fun showPlaybackControls() {
         if (fullscreen) {
             fullscreenControlsView?.visibility = View.VISIBLE
-        } else {
-            settingsPanelView?.visibility = View.VISIBLE
         }
+        // Di mode biasa, panel dibuka melalui tombol pengaturan.
 
         if (::playerView.isInitialized) {
             playerView.showController()
