@@ -812,6 +812,61 @@ class MainActivity : Activity() {
             }
         }
 
+        // Tombol volume Cyber Neon: tampilkan kontrol volume Android.
+        val volumeNeonButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Atur volume media"
+            setImageResource(R.drawable.ic_volume_neon)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setOnClickListener {
+                val audio = getSystemService(AUDIO_SERVICE) as
+                    android.media.AudioManager
+                audio.adjustStreamVolume(
+                    android.media.AudioManager.STREAM_MUSIC,
+                    android.media.AudioManager.ADJUST_SAME,
+                    android.media.AudioManager.FLAG_SHOW_UI
+                )
+            }
+        }
+
+        // Tombol fullscreen Cyber Neon.
+        val fullscreenNeonButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Buka atau tutup layar penuh"
+            setImageResource(R.drawable.ic_fullscreen_neon)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setOnClickListener {
+                toggleFullscreen()
+            }
+        }
+
+        // Tombol ukuran Cyber Neon: Fit, Fill, atau Zoom.
+        val sizeNeonButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Pilih ukuran video"
+            setImageResource(R.drawable.ic_size_neon)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setOnClickListener {
+                val popup = android.widget.PopupMenu(this@MainActivity, this)
+                listOf("Fit", "Fill", "Zoom").forEachIndexed { index, title ->
+                    popup.menu.add(title).setOnMenuItemClickListener {
+                        sizeSpinner.setSelection(index)
+                        true
+                    }
+                }
+                popup.show()
+            }
+        }
+
         // Ikon resolusi Cyber Neon di sebelah kiri roda gigi.
         val resolutionButton = android.widget.ImageButton(this).apply {
             contentDescription = "Pilih resolusi video"
@@ -1054,6 +1109,45 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP
             )
+        )
+
+        // Volume di kiri fullscreen
+        videoContainer.addView(
+            volumeNeonButton,
+            FrameLayout.LayoutParams(
+                dp(40),
+                dp(40),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(184)
+                bottomMargin = dp(8)
+            }
+        )
+
+        // Fullscreen di kiri ukuran
+        videoContainer.addView(
+            fullscreenNeonButton,
+            FrameLayout.LayoutParams(
+                dp(40),
+                dp(40),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(140)
+                bottomMargin = dp(8)
+            }
+        )
+
+        // Ukuran di kiri resolusi
+        videoContainer.addView(
+            sizeNeonButton,
+            FrameLayout.LayoutParams(
+                dp(40),
+                dp(40),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(96)
+                bottomMargin = dp(8)
+            }
         )
 
         // Ikon resolusi di kiri roda gigi, keduanya di dalam video.
