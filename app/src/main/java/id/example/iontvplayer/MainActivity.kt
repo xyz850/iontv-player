@@ -60,6 +60,10 @@ class MainActivity : Activity() {
     private val channelUrlDetails = mutableMapOf<String, String>()
     private val channelUrlStatusViews =
         mutableMapOf<String, MutableList<TextView>>()
+    private val channelUrlIndicatorViews =
+        mutableMapOf<String, MutableList<View>>()
+    private var channelUrlBlinkRunnable: Runnable? = null
+    private var channelUrlBlinkVisible = true
 
     private var playlistRequestHeaders: Map<String, String> = emptyMap()
     private var urlScanInProgress = false
@@ -442,24 +446,6 @@ class MainActivity : Activity() {
             popup.show()
         }
 
-        lateinit var resolutionButton: LinearLayout
-        resolutionButton = addNeonControl(
-            "▤", "resolusi", "Pilih resolusi video"
-        ) {
-            val popup = android.widget.PopupMenu(this, resolutionButton)
-            val adapter = resolutionSpinner.adapter
-            if (adapter != null) {
-                for (i in 0 until adapter.count) {
-                    val title = adapter.getItem(i)?.toString() ?: continue
-                    popup.menu.add(title).setOnMenuItemClickListener {
-                        resolutionSpinner.setSelection(i)
-                        true
-                    }
-                }
-            }
-            popup.show()
-        }
-
         addNeonControl(
             "↻", "refresh", "Muat ulang stream saat ini"
         ) {
@@ -517,7 +503,6 @@ class MainActivity : Activity() {
                 }
         }
         addSpinnerControl("", orientationSpinner, 100)
-        controlsRow.getChildAt(5).visibility = View.GONE
 
         sizeSpinner = Spinner(this).apply {
             adapter = compactSpinnerAdapter(
@@ -585,7 +570,6 @@ class MainActivity : Activity() {
                 }
         }
         addSpinnerControl("", resolutionSpinner, 104)
-        controlsRow.getChildAt(6).visibility = View.GONE
 
         val brightnessColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -916,6 +900,39 @@ class MainActivity : Activity() {
     }
 
 
+    private fun startChannelUrlBlinking() {
+        if (channelUrlBlinkRunnable != null) return
+
+        val task = object : Runnable {
+            override fun run() {
+                if (isFinishing || isDestroyed) return
+
+                channelUrlBlinkVisible = !channelUrlBlinkVisible
+                val visibleRect = android.graphics.Rect()
+
+                channelUrlIndicatorViews.values.forEach { indicators ->
+                    indicators.forEach { dot ->
+                        val isVisible = dot.isShown &&
+                            dot.getGlobalVisibleRect(visibleRect)
+
+                        dot.alpha = if (!isVisible) {
+                            1f
+                        } else if (channelUrlBlinkVisible) {
+                            1f
+                        } else {
+                            0.28f
+                        }
+                    }
+                }
+
+                controlsHandler.postDelayed(this, 550L)
+            }
+        }
+
+        channelUrlBlinkRunnable = task
+        controlsHandler.post(task)
+    }
+
     private fun updateChannelUrlStatus(
         url: String,
         state: String,
@@ -929,29 +946,49 @@ class MainActivity : Activity() {
         channelUrlStatuses[url] = normalized
         channelUrlDetails[url] = detail
 
-        val textColor = when (normalized) {
-            "ONLINE" -> Color.rgb(0, 230, 118)
-            "OFFLINE" -> Color.rgb(255, 82, 82)
-            else -> Color.rgb(255, 215, 64)
+        val neonColor = when (normalized) {
+            "ONLINE" -> Color.rgb(0, 245, 255)   // Cyan neon
+            "OFFLINE" -> Color.rgb(255, 54, 209) // Magenta neon
+            else -> Color.rgb(255, 215, 64)      // Kuning neon
         }
-        val fillColor = when (normalized) {
-            "ONLINE" -> Color.rgb(8, 48, 35)
-            "OFFLINE" -> Color.rgb(55, 20, 28)
-            else -> Color.rgb(52, 43, 14)
+
+        val badgeFill = when (normalized) {
+            "ONLINE" -> Color.rgb(5, 30, 42)
+            "OFFLINE" -> Color.rgb(38, 13, 42)
+            else -> Color.rgb(48, 39, 12)
         }
 
         channelUrlStatusViews[url]?.forEach { badge ->
             badge.text = normalized
-            badge.setTextColor(textColor)
-            badge.background =
-                android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(5).toFloat()
-                    setColor(fillColor)
-                }
+            badge.setTextColor(neonColor)
             badge.contentDescription =
                 "Status URL $normalized" +
                     if (detail.isBlank()) "" else ": $detail"
+        }
+
+        channelUrlIndicatorViews[url]?.forEach { indicator ->
+            indicator.background =
+                android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(neonColor)
+                }
+            indicator.contentDescription = "Indikator $normalized"
+            indicator.alpha = 1f
+        }
+
+        // Warna latar baris status mengikuti status aktif.
+        channelUrlStatusViews[url]?.forEach { badge ->
+            val row = badge.parent
+            if (row is android.view.View) {
+                row.background =
+                    android.graphics.drawable.GradientDrawable().apply {
+                        shape =
+                            android.graphics.drawable.GradientDrawable.RECTANGLE
+                        cornerRadius = dp(5).toFloat()
+                        setColor(badgeFill)
+                        setStroke(dp(1), neonColor)
+                    }
+            }
         }
     }
 
@@ -1065,6 +1102,7 @@ class MainActivity : Activity() {
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
         channelGrid.removeAllViews()
         channelUrlStatusViews.clear()
+        channelUrlIndicatorViews.clear()
         channelGrid.columnCount = 1
 
         val screenWidthDp = resources.configuration.screenWidthDp
@@ -1120,18 +1158,47 @@ class MainActivity : Activity() {
                 )
             )
 
+            val statusRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(7), dp(4), dp(7), dp(4))
+            }
+
+            val statusDot = View(this).apply {
+                background =
+                    android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.OVAL
+                        setColor(Color.rgb(255, 215, 64))
+                    }
+                contentDescription = "Indikator status URL"
+                elevation = dp(4).toFloat()
+            }
+
+            statusRow.addView(
+                statusDot,
+                LinearLayout.LayoutParams(dp(9), dp(9)).apply {
+                    marginEnd = dp(6)
+                }
+            )
+
             val statusBadge = TextView(this).apply {
                 textSize = 9f
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setPadding(dp(6), dp(5), dp(6), dp(5))
+                gravity = Gravity.CENTER_VERTICAL
                 isSingleLine = true
             }
-            card.addView(statusBadge)
+            statusRow.addView(statusBadge)
+            card.addView(statusRow)
+
+            channelUrlIndicatorViews.getOrPut(entry.url) {
+                mutableListOf()
+            }.add(statusDot)
 
             channelUrlStatusViews.getOrPut(entry.url) {
                 mutableListOf()
             }.add(statusBadge)
+
+            startChannelUrlBlinking()
 
             updateChannelUrlStatus(
                 entry.url,
@@ -2579,6 +2646,10 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
+        channelUrlBlinkRunnable?.let {
+            controlsHandler.removeCallbacks(it)
+        }
+        channelUrlBlinkRunnable = null
         urlCheckExecutor.shutdownNow()
         releasePlayer()
         super.onDestroy()
