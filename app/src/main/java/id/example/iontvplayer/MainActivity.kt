@@ -812,6 +812,24 @@ class MainActivity : Activity() {
             }
         }
 
+        // Ikon resolusi Cyber Neon di sebelah kiri roda gigi.
+        val resolutionButton = android.widget.ImageButton(this).apply {
+            contentDescription = "Pilih resolusi video"
+            setImageResource(R.drawable.ic_resolution_neon)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setOnClickListener {
+                settingsPanel.visibility = View.VISIBLE
+                resolutionSpinner.post {
+                    resolutionSpinner.performClick()
+                }
+            }
+        }
+
+
 
         val channelContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -1036,6 +1054,19 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP
             )
+        )
+
+        // Ikon resolusi di kiri roda gigi, keduanya di dalam video.
+        videoContainer.addView(
+            resolutionButton,
+            FrameLayout.LayoutParams(
+                dp(40),
+                dp(40),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(52)
+                bottomMargin = dp(8)
+            }
         )
 
         // Roda gigi Cyber Neon mengambang di dalam video.
