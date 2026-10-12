@@ -72,7 +72,7 @@ class MainActivity : Activity() {
     private var urlMonitorRunnable: Runnable? = null
 
     private val urlCheckExecutor =
-        java.util.concurrent.Executors.newFixedThreadPool(12)
+        java.util.concurrent.Executors.newFixedThreadPool(4)
 
     private val appPrefs by lazy {
         getSharedPreferences("iontv_settings", MODE_PRIVATE)
@@ -1150,8 +1150,8 @@ class MainActivity : Activity() {
             connection = (java.net.URL(entry.url).openConnection()
                 as java.net.HttpURLConnection).apply {
                 instanceFollowRedirects = true
-                connectTimeout = 3500
-                readTimeout = 3500
+                connectTimeout = 8000
+                readTimeout = 8000
                 requestMethod = "GET"
                 setRequestProperty("Accept", "*/*")
                 setRequestProperty("Range", "bytes=0-0")
