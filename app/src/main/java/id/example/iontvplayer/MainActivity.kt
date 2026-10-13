@@ -128,17 +128,16 @@ class MainActivity : Activity() {
     private val white = Color.WHITE
     private val muted = Color.rgb(157, 185, 200)
     private var splashAnimator: android.animation.ValueAnimator? = null
+    private var splashShowing = false
+    private var splashTimeoutRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = bg
         window.navigationBarColor = bg
 
-        // Langsung tampilkan UI utama tanpa layar pembuka.
-        // Pemulihan playlist otomatis tetap dijalankan.
-        splashAnimator?.cancel()
-        splashAnimator = null
         buildUi()
+        showSplash()
         restoreSavedPlaylist()
     }
 
@@ -150,17 +149,65 @@ class MainActivity : Activity() {
             setPadding(dp(24))
         }
 
-        val logo = TextView(this).apply {
-            text = "▶"
-            textSize = 58f
-            gravity = Gravity.CENTER
-            setTextColor(accent)
+        val logo = object : View(this) {
+            private val paint = android.graphics.Paint(
+                android.graphics.Paint.ANTI_ALIAS_FLAG
+            )
+
+            override fun onDraw(canvas: android.graphics.Canvas) {
+                super.onDraw(canvas)
+                val cx = width / 2f
+                val cy = height / 2f
+                val r = dp(39).toFloat()
+                val path = android.graphics.Path().apply {
+                    moveTo(cx, cy - r)
+                    lineTo(cx + r * 0.866f, cy - r * 0.5f)
+                    lineTo(cx + r * 0.866f, cy + r * 0.5f)
+                    lineTo(cx, cy + r)
+                    lineTo(cx - r * 0.866f, cy + r * 0.5f)
+                    lineTo(cx - r * 0.866f, cy - r * 0.5f)
+                    close()
+                }
+
+                paint.color = accent
+                paint.style = android.graphics.Paint.Style.STROKE
+                paint.strokeWidth = dp(2).toFloat()
+                paint.setShadowLayer(dp(9).toFloat(), 0f, 0f, accent)
+                canvas.drawPath(path, paint)
+
+                val inner = android.graphics.Path().apply {
+                    moveTo(cx, cy - r + dp(10))
+                    lineTo(cx + r * 0.866f - dp(9), cy - r * 0.5f + dp(5))
+                    lineTo(cx + r * 0.866f - dp(9), cy + r * 0.5f - dp(5))
+                    lineTo(cx, cy + r - dp(10))
+                    lineTo(cx - r * 0.866f + dp(9), cy + r * 0.5f - dp(5))
+                    lineTo(cx - r * 0.866f + dp(9), cy - r * 0.5f + dp(5))
+                    close()
+                }
+                paint.strokeWidth = dp(1).toFloat()
+                paint.alpha = 170
+                canvas.drawPath(inner, paint)
+
+                val play = android.graphics.Path().apply {
+                    moveTo(cx - dp(9).toFloat(), cy - dp(15).toFloat())
+                    lineTo(cx + dp(16).toFloat(), cy)
+                    lineTo(cx - dp(9).toFloat(), cy + dp(15).toFloat())
+                    close()
+                }
+                paint.style = android.graphics.Paint.Style.FILL
+                paint.alpha = 255
+                canvas.drawPath(play, paint)
+                paint.clearShadowLayer()
+            }
+        }.apply {
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         }
+
         splash.addView(
             logo,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                dp(112)
             )
         )
 
@@ -201,29 +248,20 @@ class MainActivity : Activity() {
                 paint.color = Color.rgb(20, 38, 54)
                 canvas.drawRoundRect(track, dp(3).toFloat(), dp(3).toFloat(), paint)
 
-                val colors = intArrayOf(
-                    Color.rgb(0, 245, 255),
-                    Color.rgb(255, 54, 209),
-                    Color.rgb(75, 160, 255)
-                )
                 val total = right - left
                 val block = total * 0.42f
                 val start = left + (total + block) * phase - block
-                val segment = block / colors.size
 
                 canvas.save()
                 canvas.clipRect(track)
-                for (i in colors.indices) {
-                    paint.color = colors[i]
-                    paint.setShadowLayer(dp(6).toFloat(), 0f, 0f, colors[i])
-                    val rect = android.graphics.RectF(
-                        start + i * segment, top,
-                        start + (i + 1) * segment, bottom
-                    )
-                    canvas.drawRoundRect(
-                        rect, dp(3).toFloat(), dp(3).toFloat(), paint
-                    )
-                }
+                paint.color = accent
+                paint.setShadowLayer(dp(6).toFloat(), 0f, 0f, accent)
+                val rect = android.graphics.RectF(
+                    start, top, start + block, bottom
+                )
+                canvas.drawRoundRect(
+                    rect, dp(3).toFloat(), dp(3).toFloat(), paint
+                )
                 paint.clearShadowLayer()
                 canvas.restore()
             }
@@ -248,17 +286,43 @@ class MainActivity : Activity() {
         }
         splash.addView(neonCaption)
 
+        splashShowing = true
         setContentView(splash)
         splashAnimator?.cancel()
         splashAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 1250L
+            duration = 1500L
             repeatCount = android.animation.ValueAnimator.INFINITE
             interpolator = android.view.animation.LinearInterpolator()
             addUpdateListener {
-                loadingLine.phase = it.animatedValue as Float
+                val phase = it.animatedValue as Float
+                loadingLine.phase = phase
                 loadingLine.invalidate()
+                logo.alpha = 0.78f + 0.22f *
+                    kotlin.math.sin(phase * 2.0 * Math.PI).toFloat()
             }
             start()
+        }
+
+        splashTimeoutRunnable = Runnable {
+            dismissSplash()
+        }
+        window.decorView.postDelayed(splashTimeoutRunnable!!, 120_000L)
+    }
+
+    private fun dismissSplash() {
+        if (!splashShowing) return
+        splashShowing = false
+
+        splashTimeoutRunnable?.let {
+            window.decorView.removeCallbacks(it)
+        }
+        splashTimeoutRunnable = null
+
+        splashAnimator?.cancel()
+        splashAnimator = null
+
+        if (!isFinishing && !isDestroyed) {
+            setContentView(root)
         }
     }
 
@@ -271,7 +335,7 @@ class MainActivity : Activity() {
             .putString("playlist_url", savedPlaylistUrl)
             .apply()
 
-        urlInput.post {
+        window.decorView.post {
             refererInput.setText(appPrefs.getString("referer", "") ?: "")
             originInput.setText(appPrefs.getString("origin", "") ?: "")
             uaInput.setText(
@@ -302,7 +366,7 @@ class MainActivity : Activity() {
     ) {
         super.onConfigurationChanged(newConfig)
 
-        if (fullscreen || !::playerView.isInitialized) return
+        if (fullscreen || splashShowing || !::playerView.isInitialized) return
 
         val oldPlayerView = playerView
         val currentPlayer = player
@@ -2780,6 +2844,7 @@ class MainActivity : Activity() {
                     }
 
                 runOnUiThread {
+                    dismissSplash()
                     swipeRefreshLayout.isRefreshing = false
                     if (channels.isEmpty()) {
                         loadedPlaylistUrl = null
@@ -2816,6 +2881,7 @@ class MainActivity : Activity() {
                 }
             } catch (e: Exception) {
                 runOnUiThread {
+                    dismissSplash()
                     swipeRefreshLayout.isRefreshing = false
                     status.text =
                         "Gagal membaca playlist: ${e.message ?: "koneksi atau format tidak valid"}"
@@ -3476,6 +3542,11 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        splashTimeoutRunnable?.let {
+            window.decorView.removeCallbacks(it)
+        }
+        splashTimeoutRunnable = null
+        splashShowing = false
         splashAnimator?.cancel()
         splashAnimator = null
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
