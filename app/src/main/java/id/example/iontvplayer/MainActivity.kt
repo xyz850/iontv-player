@@ -61,6 +61,7 @@ class MainActivity : Activity() {
     private lateinit var sizeSpinner: Spinner
     private lateinit var brightnessBar: SeekBar
     private var brightnessPopup: FrameLayout? = null
+    private var videoOverlayControls: List<View> = emptyList()
     private lateinit var channelSpinner: Spinner
     private lateinit var channelGrid: GridLayout
     private var playlistChannels: List<PlaylistEntry> = emptyList()
@@ -1126,6 +1127,7 @@ class MainActivity : Activity() {
                         if (panel.visibility == View.VISIBLE) View.GONE
                         else View.VISIBLE
                 }
+                scheduleControlsAutoHide()
             }
         }
 
@@ -1364,6 +1366,18 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(42)
             )
+        )
+
+        // Kontrol Cyber Neon disembunyikan otomatis saat menonton.
+        videoOverlayControls = listOf(
+            brightnessNeonButton,
+            subtitleNeonButton,
+            volumeNeonButton,
+            fullscreenNeonButton,
+            sizeNeonButton,
+            resolutionButton,
+            gearButton,
+            bottomExitBar
         )
 
         setContentView(root)
@@ -1916,6 +1930,9 @@ class MainActivity : Activity() {
         hideControlsRunnable?.let { controlsHandler.removeCallbacks(it) }
 
         val task = Runnable {
+            videoOverlayControls.forEach { it.visibility = View.GONE }
+            brightnessPopup?.visibility = View.GONE
+
             if (fullscreen) {
                 fullscreenControlsView?.visibility = View.GONE
             }
@@ -1924,15 +1941,15 @@ class MainActivity : Activity() {
             }
         }
         hideControlsRunnable = task
-        controlsHandler.postDelayed(task, 3000L)
+        controlsHandler.postDelayed(task, 4000L)
     }
 
     private fun showPlaybackControls() {
+        videoOverlayControls.forEach { it.visibility = View.VISIBLE }
+
         if (fullscreen) {
             fullscreenControlsView?.visibility = View.VISIBLE
         }
-        // Di mode biasa, panel dibuka melalui tombol pengaturan.
-
         if (::playerView.isInitialized) {
             playerView.showController()
         }
