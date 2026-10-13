@@ -293,7 +293,7 @@ class MainActivity : Activity() {
                 .takeIf { it.isNotEmpty() }
                 ?.let { headers["User-Agent"] = it }
 
-            loadPlaylist(savedPlaylistUrl, headers)
+            loadPlaylist(savedPlaylistUrl, headers, autoPlayFirst = true)
         }
     }
 
@@ -2699,7 +2699,11 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    private fun loadPlaylist(url: String, headers: Map<String, String>) {
+    private fun loadPlaylist(
+        url: String,
+        headers: Map<String, String>,
+        autoPlayFirst: Boolean = false
+    ) {
         status.text = ""
 
         Thread {
@@ -2755,8 +2759,20 @@ class MainActivity : Activity() {
                         )
                         channelSpinner.setSelection(0)
                         status.text =
-                            "Playlist dimuat: ${channels.size} channel. Ketuk channel untuk memutar."
+                            "Playlist dimuat: ${channels.size} channel."
                         startUrlMonitoring()
+
+                        if (autoPlayFirst) {
+                            channelSpinner.post {
+                                if (!isFinishing && !isDestroyed &&
+                                    loadedPlaylistUrl == url &&
+                                    playlistChannels.isNotEmpty()
+                                ) {
+                                    channelSpinner.setSelection(0)
+                                    playStream()
+                                }
+                            }
+                        }
                     }
                 }
             } catch (e: Exception) {
