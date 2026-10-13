@@ -385,7 +385,7 @@ class MainActivity : Activity() {
         }
 
         val liveLabel = TextView(this).apply {
-            text = "SIARAN LANGSUNG"
+            text = "LIVE"
             setTextColor(Color.rgb(0, 245, 255))
             textSize = 10f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -396,12 +396,8 @@ class MainActivity : Activity() {
         liveIndicator = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(3), dp(12), dp(3))
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.argb(215, 3, 12, 30))
-                setStroke(dp(1), Color.rgb(0, 180, 210))
-                cornerRadius = dp(14).toFloat()
-            }
+            setPadding(0, 0, 0, 0)
+            background = null
             addView(
                 liveIndicatorDot,
                 LinearLayout.LayoutParams(dp(8), dp(8))
