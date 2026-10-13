@@ -1373,25 +1373,26 @@ class MainActivity : Activity() {
 
         // Bilah tombol berada di luar video, tepat setelah area video.
         val videoParent = videoContainer.parent as? LinearLayout
-        if (videoParent == null) {
-            p.write_text(s)
-            print("STOP: perubahan parsial terdeteksi; pulihkan backup:", backup)
-            sys.exit(1)
-        }
-        val videoIndex = videoParent.indexOfChild(videoContainer)
-        if (videoIndex < 0) {
-            p.write_text(s)
-            print("STOP: posisi video tidak ditemukan; pulihkan backup:", backup)
-            sys.exit(1)
-        }
-        videoParent.addView(
-            bottomExitBar,
-            videoIndex + 1,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(42)
+        val videoIndex = videoParent?.indexOfChild(videoContainer) ?: -1
+        if (videoParent != null && videoIndex >= 0) {
+            videoParent.addView(
+                bottomExitBar,
+                videoIndex + 1,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(42)
+                )
             )
-        )
+        } else {
+            // Pengaman jika posisi induk video belum tersedia.
+            root.addView(
+                bottomExitBar,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(42)
+                )
+            )
+        }
 
         // Kontrol Cyber Neon disembunyikan otomatis saat menonton.
         videoOverlayControls = listOf(
