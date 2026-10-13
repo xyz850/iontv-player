@@ -4105,10 +4105,18 @@ class MainActivity : Activity() {
                 if (!group.isTrackSupported(i)) continue
                 if (format.width <= 0 || format.height <= 0) continue
 
-                val label = "${format.height}p (${format.width}×${format.height})"
-                if (options.none { it.label == label }) {
-                    options.add(VideoOption(label, group, i))
+                val baseLabel = "${format.height}p (${format.width}×${format.height})"
+                val bitrateLabel = if (format.bitrate > 0) {
+                    String.format(
+                        java.util.Locale.ROOT,
+                        "%.2f Mbps",
+                        format.bitrate / 1_000_000.0
+                    )
+                } else {
+                    "bitrate tidak diketahui"
                 }
+                val label = "$baseLabel · $bitrateLabel"
+                options.add(VideoOption(label, group, i))
             }
         }
 
