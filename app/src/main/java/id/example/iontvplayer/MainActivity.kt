@@ -179,10 +179,10 @@ class MainActivity : Activity() {
                 }
 
                 val parser = android.util.Xml.newPullParser()
+                val aliases = mutableMapOf<String, String>()
+                val programmes = mutableListOf<EpgProgramme>()
                 connection.inputStream.buffered().use { input ->
                     parser.setInput(input, null)
-                    val aliases = mutableMapOf<String, String>()
-                    val programmes = mutableListOf<EpgProgramme>()
                     var event = parser.eventType
                     var channelId = ""
                     var programmeChannel = ""
