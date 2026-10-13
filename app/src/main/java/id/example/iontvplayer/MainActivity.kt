@@ -142,10 +142,13 @@ class MainActivity : Activity() {
     }
 
     private fun showSplash() {
-        val splash = LinearLayout(this).apply {
+        val splash = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(bg)
+        }
+
+        val splashContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(bg)
             setPadding(dp(24))
         }
 
@@ -203,7 +206,7 @@ class MainActivity : Activity() {
             setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         }
 
-        splash.addView(
+        splashContent.addView(
             logo,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -212,14 +215,14 @@ class MainActivity : Activity() {
         )
 
         val title = TextView(this).apply {
-            text = "ION TV PLAYER"
+            text = "CYBER NEON TV"
             textSize = 23f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setPadding(0, dp(8), 0, dp(10))
         }
-        splash.addView(title)
+        splashContent.addView(title)
 
         val message = TextView(this).apply {
             text = "Menyiapkan pemutar..."
@@ -228,7 +231,7 @@ class MainActivity : Activity() {
             setTextColor(muted)
             setPadding(0, 0, 0, dp(20))
         }
-        splash.addView(message)
+        splashContent.addView(message)
 
         val loadingLine = object : View(this) {
             var phase = 0f
@@ -269,7 +272,7 @@ class MainActivity : Activity() {
             setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         }
 
-        splash.addView(
+        splashContent.addView(
             loadingLine,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(20)
@@ -284,7 +287,39 @@ class MainActivity : Activity() {
             letterSpacing = 0.10f
             setPadding(0, dp(14), 0, 0)
         }
-        splash.addView(neonCaption)
+        splashContent.addView(neonCaption)
+
+
+        // Tulisan hak cipta di tengah bawah layar pembuka.
+        val copyright = TextView(this).apply {
+            text = "© Copyright Developer Bossku™"
+            textSize = 11f
+            gravity = Gravity.CENTER
+            setTextColor(accent)
+            setShadowLayer(dp(5).toFloat(), 0f, 0f, accent)
+            letterSpacing = 0.04f
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+
+        splash.addView(
+            splashContent,
+            android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+        )
+
+        splash.addView(
+            copyright,
+            android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            ).apply {
+                bottomMargin = dp(18)
+            }
+        )
 
         splashShowing = true
         setContentView(splash)
@@ -306,7 +341,7 @@ class MainActivity : Activity() {
         splashTimeoutRunnable = Runnable {
             dismissSplash()
         }
-        window.decorView.postDelayed(splashTimeoutRunnable!!, 120_000L)
+        window.decorView.postDelayed(splashTimeoutRunnable!!, 300_000L)
     }
 
     private fun dismissSplash() {

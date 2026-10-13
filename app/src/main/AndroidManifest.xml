@@ -4,7 +4,7 @@
         android:icon="@drawable/iontv_icon"
         android:roundIcon="@drawable/iontv_icon"
         android:allowBackup="true"
-        android:label="ION TV Player"
+        android:label="Cyber Neon TV"
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
         <activity
