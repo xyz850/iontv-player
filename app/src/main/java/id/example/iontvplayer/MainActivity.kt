@@ -1164,12 +1164,10 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
-                settingsPanel.visibility =
-                    if (settingsPanel.visibility == View.VISIBLE) {
-                        View.GONE
-                    } else {
-                        View.VISIBLE
-                    }
+                // Panel sumber tetap tersembunyi agar tidak menutupi video.
+                settingsPanel.visibility = View.GONE
+                sourcePanel.visibility = View.GONE
+                scheduleControlsAutoHide()
             }
         }
 
