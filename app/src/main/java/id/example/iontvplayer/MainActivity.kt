@@ -841,7 +841,25 @@ class MainActivity : Activity() {
                 val popup = android.widget.PopupMenu(this@MainActivity, this)
                 listOf("Fit", "Fill", "Zoom").forEachIndexed { index, title ->
                     popup.menu.add(title).setOnMenuItemClickListener {
-                        sizeSpinner.setSelection(index)
+                        val mode = when (index) {
+                            1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                            2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+
+                        playerView.resizeMode = mode
+                        playerView.requestLayout()
+                        playerView.invalidate()
+
+                        if (sizeSpinner.selectedItemPosition != index) {
+                            sizeSpinner.setSelection(index)
+                        }
+
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "Mode ukuran: $title",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                         true
                     }
                 }
@@ -2197,6 +2215,8 @@ class MainActivity : Activity() {
 
                     setOnClickListener {
                         playerView.resizeMode = mode
+                        playerView.requestLayout()
+                        playerView.invalidate()
 
                         if (sizeSpinner.selectedItemPosition != position) {
                             sizeSpinner.setSelection(position)
@@ -2204,6 +2224,13 @@ class MainActivity : Activity() {
 
                         updateSizeSelection(position)
                         sizeSelector.visibility = View.GONE
+
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "Mode ukuran: $labelText",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+
                         scheduleControlsAutoHide()
                     }
                 }
