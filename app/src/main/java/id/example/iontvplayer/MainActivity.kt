@@ -276,9 +276,17 @@ class MainActivity : Activity() {
 
     private fun findEpgSchedule(entry: PlaylistEntry): Pair<EpgProgramme?, EpgProgramme?> {
         val now = System.currentTimeMillis()
-        val keys = listOfNotNull(entry.tvgId, entry.name)
-            .map { normalizeEpgKey(it) }
-            .filter { it.isNotBlank() }
+        val normalizedName = normalizeEpgKey(entry.name)
+        val keys = (
+            listOfNotNull(entry.tvgId, entry.name)
+                .map { normalizeEpgKey(it) }
+                .filter { it.isNotBlank() } +
+            if (normalizedName == "antv1" || normalizedName == "antv2") {
+                listOf("antv")
+            } else {
+                emptyList()
+            }
+        ).distinct()
         val channelIds = keys.mapNotNull { epgAliases[it] }
             .map { normalizeEpgKey(it) } + keys
         val programmes = channelIds.distinct()
