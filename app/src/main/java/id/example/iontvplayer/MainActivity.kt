@@ -1882,6 +1882,8 @@ class MainActivity : Activity() {
                         if (bitmap != null) {
                             runOnUiThread {
                                 if (!isFinishing && logo.parent != null) {
+                                    logo.scaleType = ImageView.ScaleType.FIT_CENTER
+                                    logo.adjustViewBounds = true
                                     logo.setImageBitmap(bitmap)
                                 }
                             }
