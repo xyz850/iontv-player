@@ -115,11 +115,186 @@ class MainActivity : Activity() {
         val name: String,
         val url: String,
         val logoUrl: String? = null,
+        val tvgId: String? = null,
         val headers: Map<String, String> = emptyMap(),
         val drmScheme: String? = null,
         val drmLicenseUrl: String? = null,
         val drmLicenseHeaders: Map<String, String> = emptyMap()
     )
+
+    private data class EpgProgramme(
+        val channelId: String,
+        val title: String,
+        val startMillis: Long,
+        val stopMillis: Long
+    )
+
+    private var epgProgrammesByChannel: Map<String, List<EpgProgramme>> = emptyMap()
+    private var epgAliases: Map<String, String> = emptyMap()
+    private var epgLoading = false
+
+    private fun normalizeEpgKey(value: String): String =
+        value.substringBefore(" [Channel")
+            .trim()
+            .lowercase(java.util.Locale.ROOT)
+            .removeSuffix(".id")
+            .filter { it.isLetterOrDigit() }
+
+    private fun parseXmltvTime(value: String?): Long? {
+        if (value.isNullOrBlank()) return null
+        val match = Regex("""^(\d{14})(?:\s*([+-]\d{4}|Z))?.*$""")
+            .find(value.trim()) ?: return null
+        val zone = match.groupValues.getOrElse(2) { "" }
+        val zoneText = if (zone.isBlank() || zone == "Z") "+0000" else zone
+        return try {
+            java.text.SimpleDateFormat(
+                "yyyyMMddHHmmss Z",
+                java.util.Locale.US
+            ).apply { isLenient = false }
+                .parse("${match.groupValues[1]} $zoneText")?.time
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun loadEpgSchedule() {
+        if (epgLoading) return
+        epgLoading = true
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                connection = (java.net.URL(
+                    "https://iptv-epg.org/files/epg-id.xml"
+                ).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 15000
+                    readTimeout = 25000
+                    instanceFollowRedirects = true
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/xml,text/xml,*/*")
+                    setRequestProperty("User-Agent", "IONTVPlayer/1.0")
+                }
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("HTTP $code")
+                }
+
+                val parser = android.util.Xml.newPullParser()
+                connection.inputStream.buffered().use { input ->
+                    parser.setInput(input, null)
+                    val aliases = mutableMapOf<String, String>()
+                    val programmes = mutableListOf<EpgProgramme>()
+                    var event = parser.eventType
+                    var channelId = ""
+                    var programmeChannel = ""
+                    var programmeStart: Long? = null
+                    var programmeStop: Long? = null
+                    var programmeTitle = ""
+
+                    while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                        when (event) {
+                            org.xmlpull.v1.XmlPullParser.START_TAG -> when (parser.name) {
+                                "channel" -> {
+                                    channelId = parser.getAttributeValue(null, "id") ?: ""
+                                    if (channelId.isNotBlank()) {
+                                        aliases[normalizeEpgKey(channelId)] = channelId
+                                    }
+                                }
+                                "display-name" -> {
+                                    val display = parser.nextText().trim()
+                                    if (channelId.isNotBlank() && display.isNotBlank()) {
+                                        aliases[normalizeEpgKey(display)] = channelId
+                                        val shortName = display.substringAfterLast(" - ", display)
+                                        aliases[normalizeEpgKey(shortName)] = channelId
+                                    }
+                                }
+                                "programme" -> {
+                                    programmeChannel =
+                                        parser.getAttributeValue(null, "channel") ?: ""
+                                    programmeStart = parseXmltvTime(
+                                        parser.getAttributeValue(null, "start")
+                                    )
+                                    programmeStop = parseXmltvTime(
+                                        parser.getAttributeValue(null, "stop")
+                                    )
+                                    programmeTitle = ""
+                                }
+                                "title" -> {
+                                    val title = parser.nextText().trim()
+                                    if (title.isNotBlank()) programmeTitle = title
+                                }
+                            }
+                            org.xmlpull.v1.XmlPullParser.END_TAG -> {
+                                if (parser.name == "programme") {
+                                    val start = programmeStart
+                                    val stop = programmeStop
+                                    if (programmeChannel.isNotBlank() &&
+                                        !programmeTitle.isBlank() &&
+                                        start != null && stop != null && stop > start
+                                    ) {
+                                        programmes.add(
+                                            EpgProgramme(
+                                                programmeChannel,
+                                                programmeTitle,
+                                                start,
+                                                stop
+                                            )
+                                        )
+                                    }
+                                } else if (parser.name == "channel") {
+                                    channelId = ""
+                                }
+                            }
+                        }
+                        event = parser.next()
+                    }
+                }
+
+                val grouped = programmes.groupBy { normalizeEpgKey(it.channelId) }
+                runOnUiThread {
+                    epgAliases = aliases
+                    epgProgrammesByChannel = grouped
+                    epgLoading = false
+                    if (playlistChannels.isNotEmpty()) renderChannelGrid(playlistChannels)
+                    android.util.Log.i(
+                        "IONTV-EPG",
+                        "EPG dimuat: ${programmes.size} acara, ${aliases.size} alias"
+                    )
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    epgLoading = false
+                    if (playlistChannels.isNotEmpty()) {
+                        renderChannelGrid(playlistChannels)
+                    }
+                    android.util.Log.w("IONTV-EPG", "Gagal memuat EPG", e)
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
+    }
+
+    private fun findEpgSchedule(entry: PlaylistEntry): Pair<EpgProgramme?, EpgProgramme?> {
+        val now = System.currentTimeMillis()
+        val keys = listOfNotNull(entry.tvgId, entry.name)
+            .map { normalizeEpgKey(it) }
+            .filter { it.isNotBlank() }
+        val channelIds = keys.mapNotNull { epgAliases[it] }
+            .map { normalizeEpgKey(it) } + keys
+        val programmes = channelIds.distinct()
+            .flatMap { epgProgrammesByChannel[it].orEmpty() }
+            .distinctBy { "${it.startMillis}:${it.title}" }
+            .sortedBy { it.startMillis }
+        val current = programmes.firstOrNull {
+            it.startMillis <= now && it.stopMillis > now
+        }
+        val next = programmes.firstOrNull { it.startMillis > now }
+        return current to next
+    }
+
+    private fun formatEpgTime(timeMillis: Long): String =
+        java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(timeMillis))
 
     private val fixedPlaylistUrl = "https://bit.ly/KPL203"
     private val bg = Color.rgb(5, 8, 18)
@@ -2011,21 +2186,45 @@ class MainActivity : Activity() {
             }
             card.addView(logo)
 
+            val channelInfo = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
             val name = TextView(this).apply {
                 text = entry.name
                 textSize = 12f
-                setTextColor(Color.rgb(220, 248, 255))
-                gravity = Gravity.CENTER_VERTICAL
-                maxLines = 2
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(0, 245, 255))
+                maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             }
+            channelInfo.addView(name)
+
+            val (currentProgramme, nextProgramme) = findEpgSchedule(entry)
+            val currentText = TextView(this).apply {
+                text = currentProgramme?.let {
+                    "● ${formatEpgTime(it.startMillis)} ${it.title}"
+                } ?: if (epgLoading) "● Jadwal sedang dimuat..." else "● Jadwal EPG tidak tersedia"
+                textSize = 9f
+                setTextColor(Color.rgb(220, 248, 255))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            channelInfo.addView(currentText)
+
+            val nextText = TextView(this).apply {
+                text = nextProgramme?.let {
+                    "› ${formatEpgTime(it.startMillis)} Berikutnya: ${it.title}"
+                } ?: "› Acara berikutnya belum tersedia"
+                textSize = 8f
+                setTextColor(Color.rgb(145, 180, 200))
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            channelInfo.addView(nextText)
             card.addView(
-                name,
-                LinearLayout.LayoutParams(
-                    0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
+                channelInfo,
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             )
 
             val statusRow = LinearLayout(this).apply {
@@ -2087,7 +2286,7 @@ class MainActivity : Activity() {
 
             val params = GridLayout.LayoutParams().apply {
                 width = cardWidth
-                height = dp(48)
+                height = dp(66)
                 setMargins(dp(3), dp(3), dp(3), dp(3))
             }
             channelGrid.addView(card, params)
@@ -3024,6 +3223,7 @@ class MainActivity : Activity() {
                         playlistRequestHeaders = headers.toMap()
                         playlistChannels = channels
                         renderChannelGrid(channels)
+                        loadEpgSchedule()
                         channelSpinner.adapter = ArrayAdapter(
                             this,
                             android.R.layout.simple_spinner_dropdown_item,
@@ -3073,6 +3273,7 @@ class MainActivity : Activity() {
         val result = mutableListOf<PlaylistEntry>()
         var pendingName: String? = null
         var pendingLogoUrl: String? = null
+        var pendingTvgId: String? = null
         var pendingHeaders = mutableMapOf<String, String>()
         var pendingDrmScheme: String? = null
         var pendingLicenseUrl: String? = null
@@ -3094,6 +3295,10 @@ class MainActivity : Activity() {
                 pendingLogoUrl = Regex("""tvg-logo="([^"]+)"""")
                     .find(line)?.groupValues?.getOrNull(1)
                     ?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+
+                pendingTvgId = Regex("""tvg-id="([^"]*)"""")
+                    .find(line)?.groupValues?.getOrNull(1)
+                    ?.takeIf { it.isNotBlank() }
 
                 pendingHeaders = mutableMapOf()
                 pendingDrmScheme = null
@@ -3202,6 +3407,7 @@ class MainActivity : Activity() {
                                 name = pendingName!!,
                                 url = resolved,
                                 logoUrl = pendingLogoUrl,
+                                tvgId = pendingTvgId,
                                 headers = pendingHeaders.toMap(),
                                 drmScheme = pendingDrmScheme,
                                 drmLicenseUrl = pendingLicenseUrl,
