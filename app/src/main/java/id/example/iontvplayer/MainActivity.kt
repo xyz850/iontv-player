@@ -1981,6 +1981,22 @@ class MainActivity : Activity() {
                 elevation = dp(1).toFloat()
                 isClickable = true
                 isFocusable = true
+                setOnFocusChangeListener { focusedView, hasFocus ->
+                    (focusedView.background as? android.graphics.drawable.GradientDrawable)
+                        ?.apply {
+                            setColor(
+                                if (hasFocus) Color.rgb(10, 35, 48)
+                                else Color.rgb(8, 17, 31)
+                            )
+                            setStroke(
+                                dp(if (hasFocus) 3 else 1),
+                                if (hasFocus) Color.rgb(0, 245, 255)
+                                else Color.rgb(0, 190, 220)
+                            )
+                        }
+                    focusedView.elevation =
+                        dp(if (hasFocus) 6 else 1).toFloat()
+                }
             }
 
             val logo = ImageView(this).apply {
