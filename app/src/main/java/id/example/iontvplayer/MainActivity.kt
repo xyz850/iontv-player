@@ -619,22 +619,15 @@ class MainActivity : Activity() {
                         parent: AdapterView<*>?, view: View?,
                         position: Int, id: Long
                     ) {
-                        // Fit dan Fill menampilkan seluruh gambar tanpa crop.
-                        // Fill membuka fullscreen setelah event spinner selesai.
+                        // Ubah mode ukuran video tanpa mengubah fullscreen.
                         playerView.resizeMode = when (position) {
                             1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                             2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                             else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                         }
 
-                        playerView.post {
-                            playerView.requestLayout()
-                            playerView.invalidate()
-
-                            if (position == 1 && !fullscreen) {
-                                toggleFullscreen()
-                            }
-                        }
+                        playerView.requestLayout()
+                        playerView.invalidate()
                     }
                 }
         }
