@@ -1164,9 +1164,86 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
-                // Panel sumber tetap tersembunyi agar tidak menutupi video.
+                // Panel sumber tetap tersembunyi. Roda gigi membuka menu pengingat.
                 settingsPanel.visibility = View.GONE
                 sourcePanel.visibility = View.GONE
+
+                android.app.AlertDialog.Builder(this@MainActivity)
+                    .setTitle("⚽ ION TV Football Reminder")
+                    .setMessage(
+                        "Jadwal gratis dari OpenFootball untuk lima liga: " +
+                        "Inggris, Jerman, Spanyol, Italia, dan Prancis.\\n\\n" +
+                        "Pengingat dijadwalkan lima menit sebelum kick-off. " +
+                        "Jadwal dapat berubah dan kelengkapan data tidak dijamin."
+                    )
+                    .setPositiveButton("Perbarui jadwal") { _, _ ->
+                        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                            checkSelfPermission(
+                                android.Manifest.permission.POST_NOTIFICATIONS
+                            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                        ) {
+                            requestPermissions(
+                                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                                9251
+                            )
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Izinkan notifikasi, lalu tekan roda gigi dan perbarui jadwal lagi.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            FootballReminder.refresh(this@MainActivity) { count, leagueCount ->
+                                if (count < 0) {
+                                    android.widget.Toast.makeText(
+                                        this@MainActivity,
+                                        "Jadwal gagal diunduh. Periksa internet lalu coba lagi.",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    val exact = FootballReminder.hasExactAlarmAccess(
+                                        this@MainActivity
+                                    )
+                                    val alarmInfo = if (exact) {
+                                        "Alarm presisi tersedia."
+                                    } else {
+                                        "Izin alarm presisi belum aktif; pengingat bisa terlambat."
+                                    }
+                                    android.widget.Toast.makeText(
+                                        this@MainActivity,
+                                        "Disiapkan $count pengingat dari $leagueCount liga. $alarmInfo",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+                    .setNeutralButton("Izin alarm presisi") { _, _ ->
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            try {
+                                startActivity(
+                                    android.content.Intent(
+                                        android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                        android.net.Uri.parse("package:$packageName")
+                                    )
+                                )
+                            } catch (_: Exception) {
+                                android.widget.Toast.makeText(
+                                    this@MainActivity,
+                                    "Buka Setelan Android > Aplikasi > ION TV > Alarm dan pengingat.",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        } else {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Android ini tidak memerlukan akses alarm khusus.",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                    .setNegativeButton("Tutup", null)
+                    .show()
+
                 scheduleControlsAutoHide()
             }
         }
