@@ -60,6 +60,7 @@ class MainActivity : Activity() {
     private lateinit var orientationSpinner: Spinner
     private lateinit var sizeSpinner: Spinner
     private lateinit var brightnessBar: SeekBar
+    private var brightnessPopup: FrameLayout? = null
     private lateinit var channelSpinner: Spinner
     private lateinit var channelGrid: GridLayout
     private var playlistChannels: List<PlaylistEntry> = emptyList()
@@ -697,9 +698,7 @@ class MainActivity : Activity() {
         brightnessColumn.addView(brightnessBar, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(40)
         ))
-        controlsRow.addView(brightnessColumn, LinearLayout.LayoutParams(
-            dp(112), dp(44)
-        ))
+        // Slider kecerahan dipindahkan ke panel vertikal pada toolbar video.
         brightnessColumn.visibility = View.GONE
 
         urlInput = field("URL playlist atau stream", "https://bit.ly/KPL203")
@@ -1122,14 +1121,60 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
-                val panel = brightnessBar.parent as? View
-                if (panel != null) {
+                brightnessPopup?.let { panel ->
                     panel.visibility =
                         if (panel.visibility == View.VISIBLE) View.GONE
                         else View.VISIBLE
                 }
             }
         }
+
+        // Popup slider kecerahan vertikal di dekat ikon kecerahan.
+        (brightnessBar.parent as? ViewGroup)?.removeView(brightnessBar)
+
+        val brightnessPopupPanel = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+            setPadding(dp(4), dp(8), dp(4), dp(8))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.argb(210, 3, 12, 30))
+                setStroke(dp(1), Color.rgb(0, 220, 255))
+                cornerRadius = dp(12).toFloat()
+            }
+            visibility = View.GONE
+            addView(
+                brightnessBar,
+                FrameLayout.LayoutParams(
+                    dp(132),
+                    dp(36),
+                    Gravity.CENTER
+                )
+            )
+        }
+
+        brightnessBar.rotation = -90f
+        brightnessBar.progressTintList =
+            android.content.res.ColorStateList.valueOf(accent)
+        brightnessBar.thumbTintList =
+            android.content.res.ColorStateList.valueOf(accent)
+        brightnessBar.progressBackgroundTintList =
+            android.content.res.ColorStateList.valueOf(
+                Color.argb(85, 0, 220, 255)
+            )
+        brightnessBar.contentDescription = "Kecerahan vertikal"
+        brightnessPopup = brightnessPopupPanel
+
+        videoContainer.addView(
+            brightnessPopupPanel,
+            FrameLayout.LayoutParams(
+                dp(52),
+                dp(160),
+                Gravity.BOTTOM or Gravity.END
+            ).apply {
+                rightMargin = dp(208)
+                bottomMargin = dp(44)
+            }
+        )
 
         // Toolbar Cyber Neon di dalam area video.
         // Urutan kiri ke kanan: kecerahan, CC, volume,
