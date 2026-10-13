@@ -1319,12 +1319,6 @@ class MainActivity : Activity() {
             }
         )
 
-        // Ruang fleksibel menjaga tombol refresh dan keluar di sisi kanan.
-        bottomExitBar.addView(
-            View(this),
-            LinearLayout.LayoutParams(0, 1, 1f)
-        )
-
         val bottomRefreshButton = android.widget.ImageButton(this).apply {
             contentDescription = "Muat ulang stream saat ini"
             setImageResource(R.drawable.ic_refresh)
@@ -1366,13 +1360,33 @@ class MainActivity : Activity() {
             }
         )
 
+        // Ruang fleksibel memisahkan refresh kiri dan exit kanan.
+        bottomExitBar.addView(
+            View(this),
+            LinearLayout.LayoutParams(0, 1, 1f)
+        )
+
         bottomExitBar.addView(
             bottomExitButton,
             LinearLayout.LayoutParams(dp(42), dp(38))
         )
 
-        root.addView(
+        // Bilah tombol berada di luar video, tepat setelah area video.
+        val videoParent = videoContainer.parent as? LinearLayout
+        if (videoParent == null) {
+            p.write_text(s)
+            print("STOP: perubahan parsial terdeteksi; pulihkan backup:", backup)
+            sys.exit(1)
+        }
+        val videoIndex = videoParent.indexOfChild(videoContainer)
+        if (videoIndex < 0) {
+            p.write_text(s)
+            print("STOP: posisi video tidak ditemukan; pulihkan backup:", backup)
+            sys.exit(1)
+        }
+        videoParent.addView(
             bottomExitBar,
+            videoIndex + 1,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(42)
@@ -1387,8 +1401,7 @@ class MainActivity : Activity() {
             fullscreenNeonButton,
             sizeNeonButton,
             resolutionButton,
-            gearButton,
-            bottomExitBar
+            gearButton
         )
 
         setContentView(root)
