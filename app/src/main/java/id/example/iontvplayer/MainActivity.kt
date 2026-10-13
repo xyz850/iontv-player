@@ -1772,6 +1772,8 @@ class MainActivity : Activity() {
                     marginEnd = dp(8)
                 }
                 scaleType = ImageView.ScaleType.FIT_CENTER
+                setBackgroundColor(Color.WHITE)
+                setPadding(dp(2), dp(2), dp(2), dp(2))
                 setImageResource(android.R.drawable.ic_menu_gallery)
                 contentDescription = "Logo ${entry.name}"
             }
