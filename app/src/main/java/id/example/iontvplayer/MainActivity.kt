@@ -313,6 +313,11 @@ class MainActivity : Activity() {
     private var splashAnimator: android.animation.ValueAnimator? = null
     private var splashShowing = false
     private var splashTimeoutRunnable: Runnable? = null
+    private var videoLoadingOverlay: FrameLayout? = null
+    private var videoLoadingMark: View? = null
+    private var videoLoadingAnimator: android.animation.ValueAnimator? = null
+    private var videoFrameRendered = false
+
 
 
     private fun showCyberExitDialog() {
@@ -520,6 +525,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setShadowLayer(dp(12).toFloat(), 0f, 0f, accent)
             setPadding(0, dp(8), 0, dp(10))
         }
         splashContent.addView(title)
@@ -632,8 +638,10 @@ class MainActivity : Activity() {
                 val phase = it.animatedValue as Float
                 loadingLine.phase = phase
                 loadingLine.invalidate()
-                logo.alpha = 0.78f + 0.22f *
-                    kotlin.math.sin(phase * 2.0 * Math.PI).toFloat()
+                val glow = kotlin.math.sin(phase * 2.0 * Math.PI).toFloat()
+                logo.alpha = 0.78f + 0.22f * glow
+                logo.scaleX = 0.94f + 0.06f * (glow + 1f)
+                logo.scaleY = logo.scaleX
             }
             start()
         }
@@ -642,6 +650,99 @@ class MainActivity : Activity() {
             dismissSplash()
         }
         window.decorView.postDelayed(splashTimeoutRunnable!!, 300_000L)
+    }
+
+
+    private fun showVideoLoading() {
+        val overlay = videoLoadingOverlay ?: return
+        if (isFinishing || isDestroyed) return
+
+        if (overlay.visibility == View.VISIBLE &&
+            videoLoadingAnimator?.isRunning == true
+        ) return
+
+        overlay.visibility = View.VISIBLE
+        videoLoadingAnimator?.cancel()
+
+        videoLoadingAnimator =
+            android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 1400L
+                repeatCount = android.animation.ValueAnimator.INFINITE
+                interpolator = android.view.animation.LinearInterpolator()
+                addUpdateListener {
+                    val phase = it.animatedValue as Float
+                    (videoLoadingMark as? NeonLoadingMark)?.phase = phase
+                    videoLoadingMark?.alpha = 0.78f + 0.22f *
+                        kotlin.math.sin(phase * 2.0 * Math.PI).toFloat()
+                    videoLoadingMark?.invalidate()
+                }
+                start()
+            }
+    }
+
+    private fun hideVideoLoading() {
+        videoLoadingAnimator?.cancel()
+        videoLoadingAnimator = null
+        videoLoadingOverlay?.visibility = View.GONE
+    }
+
+    private inner class NeonLoadingMark(context: android.content.Context) :
+        View(context) {
+        var phase = 0f
+        private val paint = android.graphics.Paint(
+            android.graphics.Paint.ANTI_ALIAS_FLAG
+        )
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            super.onDraw(canvas)
+
+            val cx = width / 2f
+            val cy = height / 2f
+            val r = dp(32).toFloat()
+
+            // Cincin neon berputar.
+            val oval = android.graphics.RectF(
+                cx - r, cy - r, cx + r, cy + r
+            )
+            canvas.save()
+            canvas.rotate(phase * 360f, cx, cy)
+            paint.style = android.graphics.Paint.Style.STROKE
+            paint.strokeWidth = dp(3).toFloat()
+            paint.color = accent
+            paint.alpha = 100
+            paint.clearShadowLayer()
+            canvas.drawArc(oval, 0f, 360f, false, paint)
+            paint.alpha = 255
+            paint.setShadowLayer(dp(12).toFloat(), 0f, 0f, accent)
+            canvas.drawArc(oval, -90f, 245f, false, paint)
+            canvas.restore()
+
+            // Lambang heksagon ION.
+            val hex = android.graphics.Path().apply {
+                moveTo(cx, cy - dp(23))
+                lineTo(cx + dp(20), cy - dp(11))
+                lineTo(cx + dp(20), cy + dp(11))
+                lineTo(cx, cy + dp(23))
+                lineTo(cx - dp(20), cy + dp(11))
+                lineTo(cx - dp(20), cy - dp(11))
+                close()
+            }
+            paint.style = android.graphics.Paint.Style.STROKE
+            paint.strokeWidth = dp(2).toFloat()
+            paint.alpha = 255
+            paint.setShadowLayer(dp(10).toFloat(), 0f, 0f, accent)
+            canvas.drawPath(hex, paint)
+
+            val play = android.graphics.Path().apply {
+                moveTo(cx - dp(6), cy - dp(10))
+                lineTo(cx + dp(11), cy)
+                lineTo(cx - dp(6), cy + dp(10))
+                close()
+            }
+            paint.style = android.graphics.Paint.Style.FILL
+            canvas.drawPath(play, paint)
+            paint.clearShadowLayer()
+        }
     }
 
     private fun dismissSplash() {
@@ -777,6 +878,65 @@ class MainActivity : Activity() {
                 )
             )
         }
+
+
+        val loadingOverlay = FrameLayout(this).apply {
+            setBackgroundColor(Color.argb(205, 2, 8, 20))
+            visibility = View.GONE
+            isClickable = false
+            isFocusable = false
+        }
+        videoLoadingOverlay = loadingOverlay
+
+        val loadingContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+
+        val loadingMark = NeonLoadingMark(this).apply {
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        }
+        videoLoadingMark = loadingMark
+
+        loadingContent.addView(
+            loadingMark,
+            LinearLayout.LayoutParams(dp(104), dp(104))
+        )
+
+        loadingContent.addView(TextView(this).apply {
+            text = "ION TV"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            setShadowLayer(dp(8).toFloat(), 0f, 0f, accent)
+        })
+
+        loadingContent.addView(TextView(this).apply {
+            text = "MEMUAT SIARAN..."
+            textSize = 10f
+            gravity = Gravity.CENTER
+            letterSpacing = 0.14f
+            setTextColor(accent)
+            setPadding(dp(8), dp(5), dp(8), 0)
+        })
+
+        loadingOverlay.addView(
+            loadingContent,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+        )
+
+        videoContainer.addView(
+            loadingOverlay,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
 
         liveIndicatorDot = View(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -3779,6 +3939,8 @@ class MainActivity : Activity() {
                         }
                     }
 
+                    videoFrameRendered = false
+                    showVideoLoading()
                     exo.setMediaItem(itemBuilder.build())
                     exo.addListener(object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -3790,6 +3952,14 @@ class MainActivity : Activity() {
                         }
 
                         override fun onPlaybackStateChanged(playbackState: Int) {
+                            when (playbackState) {
+                                Player.STATE_BUFFERING -> showVideoLoading()
+                                Player.STATE_IDLE, Player.STATE_ENDED -> hideVideoLoading()
+                                Player.STATE_READY -> {
+                                    if (videoFrameRendered) hideVideoLoading()
+                                }
+                            }
+
                             status.text = when (playbackState) {
                                 Player.STATE_BUFFERING ->
                                     "Menghubungkan dan buffering…"
@@ -3854,6 +4024,8 @@ class MainActivity : Activity() {
                         }
 
                         override fun onRenderedFirstFrame() {
+                            videoFrameRendered = true
+                            hideVideoLoading()
                             updateChannelUrlStatus(
                                 url,
                                 "ONLINE",
@@ -3876,6 +4048,8 @@ class MainActivity : Activity() {
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
+                            videoFrameRendered = false
+                            hideVideoLoading()
                             var causeForUrlStatus: Throwable? = error
                             var serverUnavailable = false
 
@@ -4006,6 +4180,9 @@ class MainActivity : Activity() {
         splashShowing = false
         splashAnimator?.cancel()
         splashAnimator = null
+        hideVideoLoading()
+        videoLoadingOverlay = null
+        videoLoadingMark = null
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
         controlsHandler.removeCallbacks(liveIndicatorRunnable)
         channelUrlBlinkRunnable?.let {
