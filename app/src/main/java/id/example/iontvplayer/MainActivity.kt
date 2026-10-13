@@ -131,6 +131,123 @@ class MainActivity : Activity() {
     private var splashShowing = false
     private var splashTimeoutRunnable: Runnable? = null
 
+
+    private fun showCyberExitDialog() {
+        val navy = Color.rgb(5, 11, 24)
+        val cyan = Color.rgb(0, 245, 255)
+        val whiteBlue = Color.rgb(215, 239, 247)
+
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(22), dp(22), dp(22), dp(18))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(navy)
+                setStroke(dp(1), cyan)
+                cornerRadius = dp(18).toFloat()
+            }
+        }
+
+        val icon = android.widget.ImageView(this).apply {
+            setImageResource(R.drawable.ic_power)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(cyan)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+        }
+        panel.addView(
+            icon,
+            LinearLayout.LayoutParams(dp(38), dp(38)).apply {
+                bottomMargin = dp(12)
+            }
+        )
+
+        panel.addView(TextView(this).apply {
+            text = "Keluar dari aplikasi?"
+            textSize = 19f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(cyan)
+            setShadowLayer(dp(7).toFloat(), 0f, 0f, cyan)
+        })
+
+        panel.addView(TextView(this).apply {
+            text = "Bossku yakin ingin keluar dari Cyber Neon TV?"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(whiteBlue)
+            setPadding(0, dp(10), 0, dp(22))
+        })
+
+        val buttons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
+        fun neonButton(label: String, filled: Boolean): TextView {
+            return TextView(this).apply {
+                text = label
+                textSize = 13f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(if (filled) navy else cyan)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(if (filled) cyan else navy)
+                    setStroke(dp(1), cyan)
+                    cornerRadius = dp(9).toFloat()
+                }
+                isClickable = true
+                isFocusable = true
+                setPadding(dp(8), dp(12), dp(8), dp(12))
+            }
+        }
+
+        val noButton = neonButton("TIDAK", false)
+        val yesButton = neonButton("YA, KELUAR", true)
+
+        buttons.addView(
+            noButton,
+            LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                marginEnd = dp(8)
+            }
+        )
+        buttons.addView(
+            yesButton,
+            LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                marginStart = dp(8)
+            }
+        )
+        panel.addView(
+            buttons,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val dialog = android.app.Dialog(this)
+        dialog.setContentView(panel)
+        dialog.setCanceledOnTouchOutside(true)
+
+        noButton.setOnClickListener {
+            dialog.dismiss()
+        }
+        yesButton.setOnClickListener {
+            dialog.dismiss()
+            finish()
+        }
+
+        dialog.show()
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.80f)
+            setLayout(
+                (resources.displayMetrics.widthPixels * 0.88f).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = bg
@@ -1448,7 +1565,7 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(5), dp(5), dp(5), dp(5))
             setOnClickListener {
-                finish()
+                showCyberExitDialog()
             }
         }
 
