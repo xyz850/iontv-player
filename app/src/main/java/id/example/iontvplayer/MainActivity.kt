@@ -2772,10 +2772,11 @@ class MainActivity : Activity() {
                 val finalUrl = connection.url.toString()
                 val channels = parsePlaylist(text, finalUrl)
                     .filterNot {
-                        it.name.trim().equals(
-                            "001 TRAKTIR KOPI",
-                            ignoreCase = true
-                        )
+                        val name = it.name.trim()
+                        name.equals("001 TRAKTIR KOPI", ignoreCase = true) ||
+                            name.equals("01 TRAKTIR KOPI", ignoreCase = true) ||
+                            name.equals("TRAKTIR KOPI", ignoreCase = true) ||
+                            name.equals("TES", ignoreCase = true)
                     }
 
                 runOnUiThread {
