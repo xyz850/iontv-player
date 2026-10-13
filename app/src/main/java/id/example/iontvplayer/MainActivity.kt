@@ -1143,8 +1143,8 @@ class MainActivity : Activity() {
             videoContainer.addView(
                 view,
                 FrameLayout.LayoutParams(
-                    dp(32),
-                    dp(32),
+                    dp(30),
+                    dp(30),
                     Gravity.BOTTOM or Gravity.END
                 ).apply {
                     rightMargin = dp(right)
@@ -1153,12 +1153,12 @@ class MainActivity : Activity() {
             )
         }
 
-        placeVideoIcon(brightnessNeonButton, 256)
-        placeVideoIcon(subtitleNeonButton, 216)
-        placeVideoIcon(volumeNeonButton, 176)
-        placeVideoIcon(fullscreenNeonButton, 136)
-        placeVideoIcon(sizeNeonButton, 96)
-        placeVideoIcon(resolutionButton, 48)
+        placeVideoIcon(brightnessNeonButton, 220)
+        placeVideoIcon(subtitleNeonButton, 184)
+        placeVideoIcon(volumeNeonButton, 148)
+        placeVideoIcon(fullscreenNeonButton, 112)
+        placeVideoIcon(sizeNeonButton, 76)
+        placeVideoIcon(resolutionButton, 40)
 
         val landscapeLayout =
             resources.configuration.orientation ==
