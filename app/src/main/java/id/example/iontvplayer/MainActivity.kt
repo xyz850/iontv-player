@@ -1768,7 +1768,7 @@ class MainActivity : Activity() {
             }
 
             val logo = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                     marginEnd = dp(8)
                 }
                 scaleType = ImageView.ScaleType.FIT_CENTER
