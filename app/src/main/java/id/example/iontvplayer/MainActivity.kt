@@ -1316,7 +1316,7 @@ class MainActivity : Activity() {
         settingsPanel.visibility = View.GONE
 
         val gearButton = android.widget.ImageButton(this).apply {
-            contentDescription = "Buka pengaturan video"
+            contentDescription = "Buka menu pengaturan video"
             setImageResource(R.drawable.ic_settings_neon)
             imageTintList =
                 android.content.res.ColorStateList.valueOf(accent)
@@ -1324,86 +1324,9 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(3), dp(3), dp(3), dp(3))
             setOnClickListener {
-                // Panel sumber tetap tersembunyi. Roda gigi membuka menu pengingat.
                 settingsPanel.visibility = View.GONE
                 sourcePanel.visibility = View.GONE
-
-                android.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle("⚽ ION TV Football Reminder")
-                    .setMessage(
-                        "Jadwal gratis dari OpenFootball untuk lima liga: " +
-                        "Inggris, Jerman, Spanyol, Italia, dan Prancis.\\n\\n" +
-                        "Pengingat dijadwalkan lima menit sebelum kick-off. " +
-                        "Jadwal dapat berubah dan kelengkapan data tidak dijamin."
-                    )
-                    .setPositiveButton("Perbarui jadwal") { _, _ ->
-                        if (android.os.Build.VERSION.SDK_INT >= 33 &&
-                            checkSelfPermission(
-                                android.Manifest.permission.POST_NOTIFICATIONS
-                            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                        ) {
-                            requestPermissions(
-                                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-                                9251
-                            )
-                            android.widget.Toast.makeText(
-                                this@MainActivity,
-                                "Izinkan notifikasi, lalu tekan roda gigi dan perbarui jadwal lagi.",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            FootballReminder.refresh(this@MainActivity) { count, leagueCount ->
-                                if (count < 0) {
-                                    android.widget.Toast.makeText(
-                                        this@MainActivity,
-                                        "Jadwal gagal diunduh. Periksa internet lalu coba lagi.",
-                                        android.widget.Toast.LENGTH_LONG
-                                    ).show()
-                                } else {
-                                    val exact = FootballReminder.hasExactAlarmAccess(
-                                        this@MainActivity
-                                    )
-                                    val alarmInfo = if (exact) {
-                                        "Alarm presisi tersedia."
-                                    } else {
-                                        "Izin alarm presisi belum aktif; pengingat bisa terlambat."
-                                    }
-                                    android.widget.Toast.makeText(
-                                        this@MainActivity,
-                                        "Disiapkan $count pengingat dari $leagueCount liga. $alarmInfo",
-                                        android.widget.Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
-                        }
-                    }
-                    .setNeutralButton("Izin alarm presisi") { _, _ ->
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                            try {
-                                startActivity(
-                                    android.content.Intent(
-                                        android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                                        android.net.Uri.parse("package:$packageName")
-                                    )
-                                )
-                            } catch (_: Exception) {
-                                android.widget.Toast.makeText(
-                                    this@MainActivity,
-                                    "Buka Setelan Android > Aplikasi > ION TV > Alarm dan pengingat.",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        } else {
-                            android.widget.Toast.makeText(
-                                this@MainActivity,
-                                "Android ini tidak memerlukan akses alarm khusus.",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                    .setNegativeButton("Tutup", null)
-                    .show()
-
+                showGearMenu()
                 scheduleControlsAutoHide()
             }
         }
@@ -2619,6 +2542,163 @@ class MainActivity : Activity() {
                 dp(48)
             )
         )
+    }
+
+
+    private fun showGearMenu() {
+        val options = arrayOf(
+            "Picture-in-Picture (PIP)",
+            "Orientasi layar",
+            "Football Reminder"
+        )
+        android.app.AlertDialog.Builder(this)
+            .setTitle("ION TV • Pengaturan")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> enterPlayerPip()
+                    1 -> showOrientationDialog()
+                    2 -> showFootballReminderDialog()
+                }
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
+    private fun showOrientationDialog() {
+        val options = arrayOf("Otomatis", "Potret", "Lanskap")
+        var selected = when (requestedOrientation) {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT -> 1
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE -> 2
+            else -> 0
+        }
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Orientasi layar")
+            .setSingleChoiceItems(options, selected) { _, which ->
+                selected = which
+            }
+            .setPositiveButton("Terapkan") { _, _ ->
+                applyOrientation(selected)
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun enterPlayerPip() {
+        if (android.os.Build.VERSION.SDK_INT <
+            android.os.Build.VERSION_CODES.O) {
+            android.widget.Toast.makeText(
+                this, "PIP memerlukan Android 8.0 atau lebih baru.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        if (fullscreen) {
+            android.widget.Toast.makeText(
+                this, "Keluar dari layar penuh sebelum memakai PIP.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        if (player == null) {
+            android.widget.Toast.makeText(
+                this, "Pemutar belum siap.", android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        try {
+            val params =
+                android.app.PictureInPictureParams.Builder()
+                    .setAspectRatio(android.util.Rational(16, 9))
+                    .build()
+            enterPictureInPictureMode(params)
+        } catch (_: Exception) {
+            android.widget.Toast.makeText(
+                this, "PIP tidak dapat dibuka pada perangkat ini.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun showFootballReminderDialog() {
+        android.app.AlertDialog.Builder(this@MainActivity)
+            .setTitle("⚽ ION TV Football Reminder")
+            .setMessage(
+                "Jadwal gratis dari OpenFootball untuk lima liga: " +
+                "Inggris, Jerman, Spanyol, Italia, dan Prancis.\n\n" +
+                "Pengingat dijadwalkan lima menit sebelum kick-off. " +
+                "Jadwal dapat berubah dan kelengkapan data tidak dijamin."
+            )
+            .setPositiveButton("Perbarui jadwal") { _, _ ->
+                if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                    checkSelfPermission(
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                    ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(
+                        arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                        9251
+                    )
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        "Izinkan notifikasi, lalu tekan roda gigi dan perbarui jadwal lagi.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    FootballReminder.refresh(this@MainActivity) { count, leagueCount ->
+                        if (count < 0) {
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Jadwal gagal diunduh. Periksa internet lalu coba lagi.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            val exact = FootballReminder.hasExactAlarmAccess(
+                                this@MainActivity
+                            )
+                            val alarmInfo = if (exact) {
+                                "Alarm presisi tersedia."
+                            } else {
+                                "Izin alarm presisi belum aktif; pengingat bisa terlambat."
+                            }
+                            android.widget.Toast.makeText(
+                                this@MainActivity,
+                                "Disiapkan $count pengingat dari $leagueCount liga. $alarmInfo",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+            .setNeutralButton("Izin alarm presisi") { _, _ ->
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    try {
+                        startActivity(
+                            android.content.Intent(
+                                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                android.net.Uri.parse("package:$packageName")
+                            )
+                        )
+                    } catch (_: Exception) {
+                        android.widget.Toast.makeText(
+                            this@MainActivity,
+                            "Buka Setelan Android > Aplikasi > ION TV > Alarm dan pengingat.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } else {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        "Android ini tidak memerlukan akses alarm khusus.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
     }
 
     private fun applyOrientation(position: Int) {
@@ -4171,6 +4251,20 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: android.content.res.Configuration
+    ) {
+        super.onPictureInPictureModeChanged(
+            isInPictureInPictureMode, newConfig
+        )
+        if (isInPictureInPictureMode) {
+            hideControlsRunnable?.let {
+                controlsHandler.removeCallbacks(it)
+            }
+        }
+    }
 
     override fun onBackPressed() {
         if (fullscreen) {
