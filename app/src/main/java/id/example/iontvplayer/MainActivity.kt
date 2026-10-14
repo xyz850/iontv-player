@@ -2269,6 +2269,30 @@ class MainActivity : Activity() {
                     selectedChannelCategory
         }
 
+        // Penghitung seluruh entri playlist, tidak terpengaruh filter kategori.
+        val totalChannelsLabel = TextView(this).apply {
+            text = "TOTAL SIARAN: ${playlistChannels.size}"
+            textSize = 12f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(0, 245, 255))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = dp(8).toFloat()
+                setColor(Color.rgb(8, 17, 31))
+                setStroke(dp(1), Color.rgb(0, 190, 220))
+            }
+        }
+        channelGrid.addView(
+            totalChannelsLabel,
+            GridLayout.LayoutParams().apply {
+                width = cardWidth
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
+                setMargins(dp(3), dp(3), dp(3), dp(6))
+            }
+        )
+
         if (visibleChannels.isEmpty()) {
             val pending = channels.any { entry ->
                 (channelUrlStatuses[entry.url] ?: "MEMERIKSA") == "MEMERIKSA"
@@ -2354,6 +2378,20 @@ class MainActivity : Activity() {
                         dp(if (hasFocus) 6 else 1).toFloat()
                 }
             }
+
+            val numberLabel = TextView(this).apply {
+                text = (index + 1).toString().padStart(3, '0')
+                textSize = 10f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(0, 245, 255))
+                gravity = Gravity.CENTER
+                maxLines = 1
+                contentDescription = "Nomor siaran ${index + 1}"
+                layoutParams = LinearLayout.LayoutParams(dp(28), dp(40)).apply {
+                    marginEnd = dp(4)
+                }
+            }
+            card.addView(numberLabel)
 
             val logo = ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
