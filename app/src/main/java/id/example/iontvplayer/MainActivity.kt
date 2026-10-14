@@ -1924,7 +1924,39 @@ class MainActivity : Activity() {
             }
         )
 
-        // Ruang fleksibel memisahkan refresh kiri dan exit kanan.
+        // Ruang fleksibel kiri untuk menyeimbangkan merek Cyber Neon TV.
+        bottomExitBar.addView(
+            View(this),
+            LinearLayout.LayoutParams(0, 1, 1f)
+        )
+
+        // Identitas merek di tengah antara refresh dan exit.
+        val cyberNeonBrand = TextView(this).apply {
+            text = "C Y B E R • N E O N • T V"
+            setTextColor(accent)
+            textSize = 9f
+            letterSpacing = 0.015f
+            gravity = Gravity.CENTER
+            maxLines = 1
+            includeFontPadding = false
+            setShadowLayer(
+                dp(5).toFloat(),
+                0f,
+                0f,
+                Color.rgb(0, 180, 220)
+            )
+            contentDescription = "Cyber Neon TV"
+        }
+
+        bottomExitBar.addView(
+            cyberNeonBrand,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(38)
+            )
+        )
+
+        // Ruang fleksibel kanan menjaga jarak menuju tombol exit.
         bottomExitBar.addView(
             View(this),
             LinearLayout.LayoutParams(0, 1, 1f)
