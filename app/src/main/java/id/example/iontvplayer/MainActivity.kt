@@ -319,6 +319,7 @@ class MainActivity : Activity() {
     private var videoLoadingOverlay: FrameLayout? = null
     private var videoLoadingMark: View? = null
     private var videoLoadingAnimator: android.animation.ValueAnimator? = null
+    private val videoLoadingAnimationEnabled = false
     private var videoFrameRendered = false
 
 
@@ -657,6 +658,11 @@ class MainActivity : Activity() {
 
 
     private fun showVideoLoading() {
+        if (!videoLoadingAnimationEnabled) {
+            hideVideoLoading()
+            return
+        }
+
         val overlay = videoLoadingOverlay ?: return
         if (isFinishing || isDestroyed) return
 
