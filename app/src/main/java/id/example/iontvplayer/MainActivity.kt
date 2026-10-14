@@ -1934,7 +1934,7 @@ class MainActivity : Activity() {
         val cyberNeonBrand = TextView(this).apply {
             text = "C Y B E R • N E O N • T V"
             setTextColor(accent)
-            textSize = 9f
+            textSize = 15f
             letterSpacing = 0.015f
             gravity = Gravity.CENTER
             maxLines = 1
