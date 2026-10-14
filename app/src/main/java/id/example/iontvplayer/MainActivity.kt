@@ -4266,9 +4266,58 @@ class MainActivity : Activity() {
         super.onPictureInPictureModeChanged(
             isInPictureInPictureMode, newConfig
         )
+
         if (isInPictureInPictureMode) {
             hideControlsRunnable?.let {
                 controlsHandler.removeCallbacks(it)
+            }
+            return
+        }
+
+        // Tunggu jendela aplikasi selesai kembali dari ukuran PIP.
+        window.decorView.post {
+            if (
+                isFinishing ||
+                isDestroyed ||
+                isInPictureInPictureMode ||
+                !::playerView.isInitialized
+            ) {
+                return@post
+            }
+
+            videoContainer.visibility = View.VISIBLE
+            playerView.visibility = View.VISIBLE
+
+            // Ukur ulang seluruh area video setelah jendela pulih.
+            videoContainer.post {
+                if (
+                    !isFinishing &&
+                    !isDestroyed &&
+                    !isInPictureInPictureMode &&
+                    ::playerView.isInitialized
+                ) {
+                    val params = videoContainer.layoutParams
+                    if (params != null) {
+                        params.width = ViewGroup.LayoutParams.MATCH_PARENT
+                        videoContainer.layoutParams = params
+                    }
+
+                    val playerParams = playerView.layoutParams
+                    if (playerParams != null) {
+                        playerParams.width =
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        playerParams.height =
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        playerView.layoutParams = playerParams
+                    }
+
+                    videoContainer.requestLayout()
+                    playerView.requestLayout()
+                    videoContainer.invalidate()
+                    playerView.invalidate()
+                    root.requestLayout()
+                    root.invalidate()
+                }
             }
         }
     }
