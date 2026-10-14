@@ -802,7 +802,18 @@ class MainActivity : Activity() {
     ) {
         super.onConfigurationChanged(newConfig)
 
-        if (fullscreen || splashShowing || !::playerView.isInitialized) return
+        // Jangan bangun ulang UI saat ukuran jendela PIP berubah.
+        // Pertahankan ExoPlayer dan posisi media yang sedang berjalan.
+        if (
+            fullscreen ||
+            splashShowing ||
+            !::playerView.isInitialized ||
+            (
+                android.os.Build.VERSION.SDK_INT >=
+                    android.os.Build.VERSION_CODES.O &&
+                isInPictureInPictureMode
+            )
+        ) return
 
         val oldPlayerView = playerView
         val currentPlayer = player
