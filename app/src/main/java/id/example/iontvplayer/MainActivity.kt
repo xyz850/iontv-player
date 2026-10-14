@@ -62,6 +62,9 @@ class MainActivity : Activity() {
     private lateinit var brightnessBar: SeekBar
     private var brightnessPopup: FrameLayout? = null
     private var videoOverlayControls: List<View> = emptyList()
+    private val pipSavedVisibility = linkedMapOf<View, Int>()
+    private var pipOriginalVideoLayoutParams: ViewGroup.LayoutParams? = null
+
     private lateinit var channelSpinner: Spinner
     private lateinit var channelGrid: GridLayout
     private var playlistChannels: List<PlaylistEntry> = emptyList()
@@ -2591,9 +2594,93 @@ class MainActivity : Activity() {
             .show()
     }
 
+    private fun containsPlayerView(view: View): Boolean {
+        if (view === playerView) return true
+        if (view !is ViewGroup) return false
+
+        for (i in 0 until view.childCount) {
+            if (containsPlayerView(view.getChildAt(i))) return true
+        }
+        return false
+    }
+
+    private fun prepareVideoOnlyPip(): Boolean {
+        if (!::root.isInitialized ||
+            !::playerView.isInitialized ||
+            !::videoContainer.isInitialized
+        ) return false
+
+        pipSavedVisibility.clear()
+
+        fun hideNonVideoViews(group: ViewGroup) {
+            for (i in 0 until group.childCount) {
+                val child = group.getChildAt(i)
+
+                if (child === playerView) continue
+
+                if (containsPlayerView(child)) {
+                    if (child is ViewGroup) hideNonVideoViews(child)
+                } else {
+                    pipSavedVisibility[child] = child.visibility
+                    child.visibility = View.GONE
+                }
+            }
+        }
+
+        hideNonVideoViews(root)
+
+        val original = videoContainer.layoutParams
+        pipOriginalVideoLayoutParams = original
+
+        val pipParams = when (original) {
+            is LinearLayout.LayoutParams ->
+                LinearLayout.LayoutParams(original).apply {
+                    width = ViewGroup.LayoutParams.MATCH_PARENT
+                    height = ViewGroup.LayoutParams.MATCH_PARENT
+                    weight = 0f
+                }
+            is FrameLayout.LayoutParams ->
+                FrameLayout.LayoutParams(original).apply {
+                    width = ViewGroup.LayoutParams.MATCH_PARENT
+                    height = ViewGroup.LayoutParams.MATCH_PARENT
+                }
+            else ->
+                ViewGroup.LayoutParams(original).apply {
+                    width = ViewGroup.LayoutParams.MATCH_PARENT
+                    height = ViewGroup.LayoutParams.MATCH_PARENT
+                }
+        }
+
+        videoContainer.layoutParams = pipParams
+        videoContainer.requestLayout()
+        playerView.requestLayout()
+        return true
+    }
+
+    private fun restorePipLayout() {
+        pipOriginalVideoLayoutParams?.let {
+            if (::videoContainer.isInitialized) {
+                videoContainer.layoutParams = it
+            }
+        }
+        pipOriginalVideoLayoutParams = null
+
+        pipSavedVisibility.forEach { (view, visibility) ->
+            view.visibility = visibility
+        }
+        pipSavedVisibility.clear()
+
+        if (::videoContainer.isInitialized) videoContainer.requestLayout()
+        if (::root.isInitialized) {
+            root.requestLayout()
+            root.invalidate()
+        }
+    }
+
     private fun enterPlayerPip() {
         if (android.os.Build.VERSION.SDK_INT <
-            android.os.Build.VERSION_CODES.O) {
+            android.os.Build.VERSION_CODES.O
+        ) {
             android.widget.Toast.makeText(
                 this, "PIP memerlukan Android 8.0 atau lebih baru.",
                 android.widget.Toast.LENGTH_LONG
@@ -2611,18 +2698,28 @@ class MainActivity : Activity() {
 
         if (player == null) {
             android.widget.Toast.makeText(
-                this, "Pemutar belum siap.", android.widget.Toast.LENGTH_SHORT
+                this, "Pemutar belum siap.",
+                android.widget.Toast.LENGTH_SHORT
             ).show()
             return
         }
 
         try {
+            if (!prepareVideoOnlyPip()) {
+                restorePipLayout()
+                return
+            }
+
             val params =
                 android.app.PictureInPictureParams.Builder()
                     .setAspectRatio(android.util.Rational(16, 9))
                     .build()
-            enterPictureInPictureMode(params)
+
+            if (!enterPictureInPictureMode(params)) {
+                restorePipLayout()
+            }
         } catch (_: Exception) {
+            restorePipLayout()
             android.widget.Toast.makeText(
                 this, "PIP tidak dapat dibuka pada perangkat ini.",
                 android.widget.Toast.LENGTH_LONG
@@ -4259,14 +4356,28 @@ class MainActivity : Activity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: android.content.res.Configuration
+    ) {
+        super.onPictureInPictureModeChanged(
+            isInPictureInPictureMode, newConfig
+        )
+
         if (isInPictureInPictureMode) {
-            hideControlsRunnable?.let { controlsHandler.removeCallbacks(it) }
+            hideControlsRunnable?.let {
+                controlsHandler.removeCallbacks(it)
+            }
             return
         }
+
         window.decorView.post {
-            if (isFinishing || isDestroyed || isInPictureInPictureMode || !::playerView.isInitialized) return@post
+            if (isFinishing || isDestroyed ||
+                isInPictureInPictureMode ||
+                !::playerView.isInitialized
+            ) return@post
+
+            restorePipLayout()
             videoContainer.visibility = View.VISIBLE
             playerView.visibility = View.VISIBLE
             videoContainer.requestLayout()
