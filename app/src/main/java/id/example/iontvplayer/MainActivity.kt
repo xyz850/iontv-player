@@ -134,6 +134,7 @@ class MainActivity : Activity() {
 
     private var epgProgrammesByChannel: Map<String, List<EpgProgramme>> = emptyMap()
     private var epgAliases: Map<String, String> = emptyMap()
+    private val epgScheduleCache = mutableMapOf<String, List<EpgProgramme>>()
     private var epgLoading = false
 
     private fun normalizeEpgKey(value: String): String =
@@ -256,6 +257,7 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     epgAliases = aliases
                     epgProgrammesByChannel = grouped
+                    epgScheduleCache.clear()
                     epgLoading = false
                     if (playlistChannels.isNotEmpty()) renderChannelGrid(playlistChannels)
                     android.util.Log.i(
@@ -290,12 +292,15 @@ class MainActivity : Activity() {
                 emptyList()
             }
         ).distinct()
-        val channelIds = keys.mapNotNull { epgAliases[it] }
-            .map { normalizeEpgKey(it) } + keys
-        val programmes = channelIds.distinct()
-            .flatMap { epgProgrammesByChannel[it].orEmpty() }
-            .distinctBy { "${it.startMillis}:${it.title}" }
-            .sortedBy { it.startMillis }
+        val cacheKey = keys.joinToString("|")
+        val programmes = epgScheduleCache.getOrPut(cacheKey) {
+            val channelIds = keys.mapNotNull { epgAliases[it] }
+                .map { normalizeEpgKey(it) } + keys
+            channelIds.distinct()
+                .flatMap { epgProgrammesByChannel[it].orEmpty() }
+                .distinctBy { "${it.startMillis}:${it.title}" }
+                .sortedBy { it.startMillis }
+        }
         val current = programmes.firstOrNull {
             it.startMillis <= now && it.stopMillis > now
         }
@@ -2305,9 +2310,17 @@ class MainActivity : Activity() {
             return
         }
 
+        val playlistIndexByEntry = HashMap<PlaylistEntry, Int>(
+            playlistChannels.size
+        )
+        playlistChannels.forEachIndexed { index, entry ->
+            if (!playlistIndexByEntry.containsKey(entry)) {
+                playlistIndexByEntry[entry] = index
+            }
+        }
+
         visibleChannels.forEach { entry ->
-            val index = playlistChannels.indexOf(entry)
-                .takeIf { it >= 0 }
+            val index = playlistIndexByEntry[entry]
                 ?: playlistChannels.indexOfFirst { it.url == entry.url }
 
             if (index < 0) return@forEach
