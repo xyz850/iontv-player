@@ -903,24 +903,6 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(dp(104), dp(104))
         )
 
-        loadingContent.addView(TextView(this).apply {
-            text = "ION TV"
-            textSize = 18f
-            gravity = Gravity.CENTER
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-            setShadowLayer(dp(8).toFloat(), 0f, 0f, accent)
-        })
-
-        loadingContent.addView(TextView(this).apply {
-            text = "MEMUAT SIARAN..."
-            textSize = 10f
-            gravity = Gravity.CENTER
-            letterSpacing = 0.14f
-            setTextColor(accent)
-            setPadding(dp(8), dp(5), dp(8), 0)
-        })
-
         loadingOverlay.addView(
             loadingContent,
             FrameLayout.LayoutParams(
@@ -2551,8 +2533,8 @@ class MainActivity : Activity() {
             "Orientasi layar",
             "Football Reminder"
         )
-        android.app.AlertDialog.Builder(this)
-            .setTitle("ION TV • Pengaturan")
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Pengaturan")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> enterPlayerPip()
@@ -2561,7 +2543,21 @@ class MainActivity : Activity() {
                 }
             }
             .setNegativeButton("Tutup", null)
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            val list = dialog.listView
+            list.dividerHeight = dp(2)
+            list.setPadding(0, dp(2), 0, dp(2))
+            for (i in 0 until list.childCount) {
+                list.getChildAt(i)?.let { item ->
+                    item.minimumHeight = dp(42)
+                }
+            }
+            dialog.getButton(-2)?.textSize = 12f
+            dialog.getButton(-2)?.setPadding(dp(12), 0, dp(12), 0)
+        }
+        dialog.show()
     }
 
     private fun showOrientationDialog() {
