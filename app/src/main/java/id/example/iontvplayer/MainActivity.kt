@@ -3758,6 +3758,7 @@ class MainActivity : Activity() {
         var pendingName: String? = null
         var pendingLogoUrl: String? = null
         var pendingTvgId: String? = null
+        var pendingGroupTitle: String? = null
         var pendingHeaders = mutableMapOf<String, String>()
         var pendingDrmScheme: String? = null
         var pendingLicenseUrl: String? = null
@@ -3783,6 +3784,9 @@ class MainActivity : Activity() {
                 pendingTvgId = Regex("""tvg-id="([^"]*)"""")
                     .find(line)?.groupValues?.getOrNull(1)
                     ?.takeIf { it.isNotBlank() }
+
+                pendingGroupTitle = Regex("""group-title="([^"]*)"""")
+                    .find(line)?.groupValues?.getOrNull(1)?.trim()
 
                 pendingHeaders = mutableMapOf()
                 pendingDrmScheme = null
@@ -3886,23 +3890,32 @@ class MainActivity : Activity() {
 
                     if (resolved.startsWith("http://") ||
                         resolved.startsWith("https://")) {
-                        result.add(
-                            PlaylistEntry(
-                                name = pendingName!!,
-                                url = resolved,
-                                logoUrl = pendingLogoUrl,
-                                tvgId = pendingTvgId,
-                                headers = pendingHeaders.toMap(),
-                                drmScheme = pendingDrmScheme,
-                                drmLicenseUrl = pendingLicenseUrl,
-                                drmLicenseHeaders = pendingLicenseHeaders.toMap()
+                        val isKbtrtvMoviesSeries =
+                            pendingGroupTitle?.equals(
+                                "MOVIES/SERIES KBTRTV",
+                                ignoreCase = true
+                            ) == true
+
+                        if (!isKbtrtvMoviesSeries) {
+                            result.add(
+                                PlaylistEntry(
+                                    name = pendingName!!,
+                                    url = resolved,
+                                    logoUrl = pendingLogoUrl,
+                                    tvgId = pendingTvgId,
+                                    headers = pendingHeaders.toMap(),
+                                    drmScheme = pendingDrmScheme,
+                                    drmLicenseUrl = pendingLicenseUrl,
+                                    drmLicenseHeaders = pendingLicenseHeaders.toMap()
+                                )
                             )
-                        )
+                        }
                     }
                 } catch (_: Exception) {
                     // Abaikan URL yang tidak valid.
                 }
                 pendingName = null
+                pendingGroupTitle = null
                 pendingHeaders = mutableMapOf()
                 pendingDrmScheme = null
                 pendingLicenseUrl = null
