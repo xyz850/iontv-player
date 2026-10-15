@@ -132,10 +132,65 @@ class MainActivity : Activity() {
         val stopMillis: Long
     )
 
+    private data class EpgScheduleView(
+        val entry: PlaylistEntry,
+        val currentText: TextView,
+        val nextText: TextView
+    )
+
     private var epgProgrammesByChannel: Map<String, List<EpgProgramme>> = emptyMap()
     private var epgAliases: Map<String, String> = emptyMap()
     private val epgScheduleCache = mutableMapOf<String, List<EpgProgramme>>()
+    private val epgScheduleViews = mutableListOf<EpgScheduleView>()
     private var epgLoading = false
+    private var epgRetryRunnable: Runnable? = null
+
+    private val epgScheduleRefreshRunnable = object : Runnable {
+        override fun run() {
+            if (isFinishing || isDestroyed) return
+            updateEpgScheduleViews()
+            controlsHandler.postDelayed(this, 60_000L)
+        }
+    }
+
+    private fun startEpgScheduleRefresh() {
+        controlsHandler.removeCallbacks(epgScheduleRefreshRunnable)
+        controlsHandler.postDelayed(epgScheduleRefreshRunnable, 60_000L)
+    }
+
+    private fun scheduleEpgRetry() {
+        epgRetryRunnable?.let { controlsHandler.removeCallbacks(it) }
+        val task = Runnable {
+            epgRetryRunnable = null
+            if (!isFinishing && !isDestroyed &&
+                playlistChannels.isNotEmpty() && !epgLoading
+            ) {
+                loadEpgSchedule()
+            }
+        }
+        epgRetryRunnable = task
+        controlsHandler.postDelayed(task, 60_000L)
+    }
+
+    private fun updateEpgScheduleViews() {
+        if (isFinishing || isDestroyed) return
+
+        epgScheduleViews.forEach { item ->
+            val (current, next) = findEpgSchedule(item.entry)
+
+            item.currentText.text = current?.let {
+                "● ${formatEpgTime(it.startMillis)} ${it.title}"
+            } ?: if (epgLoading) {
+                "● Jadwal sedang dimuat..."
+            } else {
+                "● Jadwal EPG tidak tersedia"
+            }
+
+            item.nextText.text = next?.let {
+                "› ${formatEpgTime(it.startMillis)} Berikutnya: ${it.title}"
+            } ?: "› Acara berikutnya belum tersedia"
+        }
+    }
 
     private fun normalizeEpgKey(value: String): String =
         value.substringBefore(" [Channel")
@@ -162,7 +217,9 @@ class MainActivity : Activity() {
     }
 
     private fun loadEpgSchedule() {
-        if (epgLoading) return
+        if (epgLoading || isFinishing || isDestroyed) return
+        epgRetryRunnable?.let { controlsHandler.removeCallbacks(it) }
+        epgRetryRunnable = null
         epgLoading = true
         Thread {
             var connection: java.net.HttpURLConnection? = null
@@ -253,8 +310,16 @@ class MainActivity : Activity() {
                     }
                 }
 
+                if (programmes.isEmpty()) {
+                    throw IllegalStateException(
+                        "XMLTV berhasil dibaca, tetapi tidak ada acara EPG yang valid"
+                    )
+                }
+
                 val grouped = programmes.groupBy { normalizeEpgKey(it.channelId) }
                 runOnUiThread {
+                    epgRetryRunnable?.let { controlsHandler.removeCallbacks(it) }
+                    epgRetryRunnable = null
                     epgAliases = aliases
                     epgProgrammesByChannel = grouped
                     epgScheduleCache.clear()
@@ -272,6 +337,7 @@ class MainActivity : Activity() {
                         renderChannelGrid(playlistChannels)
                     }
                     android.util.Log.w("IONTV-EPG", "Gagal memuat EPG", e)
+                    scheduleEpgRetry()
                 }
             } finally {
                 connection?.disconnect()
@@ -2324,6 +2390,7 @@ class MainActivity : Activity() {
 
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
         channelGrid.removeAllViews()
+        epgScheduleViews.clear()
         channelUrlStatusViews.clear()
         channelUrlIndicatorViews.clear()
         channelGrid.columnCount = 1
@@ -2574,6 +2641,7 @@ class MainActivity : Activity() {
                 ellipsize = android.text.TextUtils.TruncateAt.END
             }
             channelInfo.addView(nextText)
+            epgScheduleViews.add(EpgScheduleView(entry, currentText, nextText))
             card.addView(
                 channelInfo,
                 LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -3840,6 +3908,7 @@ class MainActivity : Activity() {
                         playlistRequestHeaders = headers.toMap()
                         playlistChannels = channels
                         renderChannelGrid(channels)
+                        startEpgScheduleRefresh()
                         loadEpgSchedule()
                         channelSpinner.adapter = ArrayAdapter(
                             this,
@@ -4611,6 +4680,10 @@ class MainActivity : Activity() {
         videoLoadingMark = null
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
         controlsHandler.removeCallbacks(liveIndicatorRunnable)
+        controlsHandler.removeCallbacks(epgScheduleRefreshRunnable)
+        epgRetryRunnable?.let { controlsHandler.removeCallbacks(it) }
+        epgRetryRunnable = null
+        epgScheduleViews.clear()
         channelUrlBlinkRunnable?.let {
             controlsHandler.removeCallbacks(it)
         }
