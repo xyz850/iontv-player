@@ -918,7 +918,7 @@ class MainActivity : Activity() {
         splashTimeoutRunnable = Runnable {
             dismissSplash()
         }
-        window.decorView.postDelayed(splashTimeoutRunnable!!, 300_000L)
+        window.decorView.postDelayed(splashTimeoutRunnable!!, 600_000L)
     }
 
 
