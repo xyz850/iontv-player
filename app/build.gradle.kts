@@ -13,12 +13,32 @@ android {
     }
 
     defaultConfig {
-        applicationId = "id.example.iontvplayer"
+        applicationId = "id.example.cyberneontv"
         minSdk = 23
         targetSdk = 35
         versionCode = 4
         versionName = "1.2"
     }
+    signingConfigs {
+        create("stable") {
+            val keyPath = System.getenv("SIGNING_KEYSTORE_PATH")
+            if (!keyPath.isNullOrBlank()) {
+                storeFile = file(keyPath)
+                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (!System.getenv("SIGNING_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("stable")
+            }
+        }
+    }
+
     kotlinOptions {
         jvmTarget = "17"
     }

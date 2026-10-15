@@ -31,12 +31,26 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK
+      - name: Prepare signing key
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$SIGNING_KEYSTORE_BASE64"
+          printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/cyber-neon-tv-release.jks"
+          test -s "$RUNNER_TEMP/cyber-neon-tv-release.jks"
+          chmod 600 "$RUNNER_TEMP/cyber-neon-tv-release.jks"
+
+      - name: Build debug APK with stable signature
+        env:
+          SIGNING_KEYSTORE_PATH: ${{ runner.temp }}/cyber-neon-tv-release.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: cyberneon
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: iontv-player-debug
+          name: cyber-neon-tv-v2-candidate
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

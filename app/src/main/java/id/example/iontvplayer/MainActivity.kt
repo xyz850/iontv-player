@@ -527,7 +527,7 @@ class MainActivity : Activity() {
             var connection: java.net.HttpURLConnection? = null
             try {
                 val endpoint = java.net.URL(
-                    "https://raw.githubusercontent.com/xyz850/cyber-neon-tv-site/main/version.json"
+                    "https://raw.githubusercontent.com/xyz850/cyber-neon-tv-site/main/version-v2.json"
                 )
                 connection = endpoint.openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "GET"
