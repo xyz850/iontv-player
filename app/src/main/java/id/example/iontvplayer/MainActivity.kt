@@ -2583,21 +2583,23 @@ class MainActivity : Activity() {
     }
 
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
+        if (channelGrid.width <= 0) {
+            channelGrid.post {
+                if (::channelGrid.isInitialized && channelGrid.width > 0) {
+                    renderChannelGrid(channels)
+                }
+            }
+            return
+        }
+
         channelGrid.removeAllViews()
         epgScheduleViews.clear()
         channelUrlStatusViews.clear()
         channelUrlIndicatorViews.clear()
         channelGrid.columnCount = 1
 
-        val screenWidthDp = resources.configuration.screenWidthDp
-        val landscapeLayout =
-            resources.configuration.orientation ==
-                android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        val cardWidth = if (landscapeLayout) {
-            dp((screenWidthDp * 0.42f - 28).toInt().coerceAtLeast(220))
-        } else {
-            dp((screenWidthDp - 24).coerceAtLeast(240))
-        }
+        // Hitung lebar kartu dari panel yang benar-benar tersedia.
+        val cardWidth = (channelGrid.width - dp(12)).coerceAtLeast(dp(1))
 
         val visibleChannels = channels.filter { entry ->
             selectedChannelCategory == "SEMUA" ||
