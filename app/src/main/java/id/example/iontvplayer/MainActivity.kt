@@ -2608,10 +2608,10 @@ class MainActivity : Activity() {
         channelGrid.columnCount = columns
 
         // Sesuaikan lebar kartu dengan panel daftar yang sebenarnya.
-        val horizontalSpaceDp = 12
+        val horizontalSpaceDp = 16
         val cardMarginsDp = 6
         val availableWidthDp =
-            (gridWidthDp - horizontalSpaceDp - columns * cardMarginsDp)
+            (gridWidthDp - horizontalSpaceDp - columns * cardMarginsDp * 2)
                 .coerceAtLeast(columns * 60)
         val cardWidth = dp(availableWidthDp / columns)
 
