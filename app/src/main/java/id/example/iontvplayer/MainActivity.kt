@@ -2634,41 +2634,6 @@ class MainActivity : Activity() {
             val playSelectedChannel = {
                 channelSpinner.setSelection(index)
                 playStream()
-
-                // Otomatis fullscreen hanya untuk pemilihan channel
-                // saat layout sedang landscape.
-                if (
-                    resources.configuration.orientation ==
-                        android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
-                    !fullscreen
-                ) {
-                    window.decorView.post {
-                        if (
-                            !isFinishing &&
-                            !fullscreen &&
-                            resources.configuration.orientation ==
-                                android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                        ) {
-                            toggleFullscreen()
-
-                            // Saat masuk fullscreen, kontrol langsung
-                            // disembunyikan sampai pengguna mengetuk video.
-                            videoOverlayControls.forEach {
-                                it.visibility = View.GONE
-                            }
-                            fullscreenControlsView?.visibility = View.GONE
-
-                            hideControlsRunnable?.let {
-                                controlsHandler.removeCallbacks(it)
-                            }
-                            hideControlsRunnable = null
-
-                            if (::playerView.isInitialized) {
-                                playerView.hideController()
-                            }
-                        }
-                    }
-                }
             }
 
             card.setOnClickListener { playSelectedChannel() }
@@ -3257,9 +3222,9 @@ class MainActivity : Activity() {
                     Gravity.TOP
                 )
             )
-            // Toolbar tampil ketika kontrol fullscreen dimunculkan.
-            // Lapisan kontrol akan disembunyikan otomatis setelah 4 detik.
-            toolbar.visibility = View.VISIBLE
+            // Toolbar atas fullscreen disembunyikan.
+            // Kontrol Cyber Neon pada video tetap dipertahankan.
+            toolbar.visibility = View.GONE
 
             // Menu ukuran video: satu ikon untuk membuka/tutup pilihan.
             val sizeModes = listOf(
@@ -3589,22 +3554,6 @@ class MainActivity : Activity() {
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             showPlaybackControls()
-
-            // Sembunyikan kontrol setelah fullscreen dibuka.
-            // Ketukan pada video akan memanggil showPlaybackControls().
-            videoOverlayControls.forEach {
-                it.visibility = View.GONE
-            }
-            fullscreenControlsView?.visibility = View.GONE
-
-            hideControlsRunnable?.let {
-                controlsHandler.removeCallbacks(it)
-            }
-            hideControlsRunnable = null
-
-            if (::playerView.isInitialized) {
-                playerView.hideController()
-            }
 
         } else {
             val parent = fullscreenOriginalParent
