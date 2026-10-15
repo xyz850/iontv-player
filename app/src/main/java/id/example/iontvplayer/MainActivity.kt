@@ -2011,13 +2011,8 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(4), dp(18), dp(4))
             isClickable = true
             isFocusable = true
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = dp(18).toFloat()
-                setColor(Color.rgb(7, 22, 36))
-                setStroke(dp(1), Color.rgb(0, 220, 255))
-            }
-            elevation = dp(3).toFloat()
+            background = null
+            elevation = 0f
             contentDescription = "Buka website Cyber Neon TV"
             setOnClickListener {
                 try {
