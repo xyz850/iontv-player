@@ -2496,7 +2496,58 @@ class MainActivity : Activity() {
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             }
-            channelInfo.addView(name)
+            val normalizedStreamUrl = entry.url
+                .substringBefore('?')
+                .substringBefore('#')
+                .lowercase()
+
+            val streamFormat = when {
+                normalizedStreamUrl.endsWith(".m3u8") -> "HLS"
+                normalizedStreamUrl.endsWith(".mpd") -> "DASH"
+                else -> "STREAM"
+            }
+
+            val nameRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
+            nameRow.addView(
+                name,
+                LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            )
+
+            val formatBadge = TextView(this).apply {
+                text = streamFormat
+                textSize = 9f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(192, 132, 252))
+                gravity = Gravity.CENTER
+                setPadding(dp(6), dp(2), dp(6), dp(2))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(5).toFloat()
+                    setColor(Color.rgb(48, 38, 74))
+                    setStroke(dp(1), Color.rgb(192, 132, 252))
+                }
+                contentDescription = "Format stream $streamFormat"
+            }
+
+            nameRow.addView(
+                formatBadge,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = dp(5)
+                }
+            )
+
+            channelInfo.addView(nameRow)
 
             val (currentProgramme, nextProgramme) = findEpgSchedule(entry)
             val currentText = TextView(this).apply {
