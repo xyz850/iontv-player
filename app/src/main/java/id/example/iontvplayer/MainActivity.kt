@@ -2010,8 +2010,10 @@ class MainActivity : Activity() {
             setTextColor(Color.rgb(0, 245, 255))
             setPadding(dp(18), dp(4), dp(18), dp(4))
             isClickable = true
-            isFocusable = true
-            background = null
+            isFocusable = false
+            setBackgroundColor(Color.TRANSPARENT)
+            backgroundTintList = null
+            stateListAnimator = null
             elevation = 0f
             contentDescription = "Buka website Cyber Neon TV"
             setOnClickListener {
