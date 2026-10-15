@@ -2512,6 +2512,23 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
             }
 
+            val formatBadge = TextView(this).apply {
+                text = streamFormat
+                textSize = 8f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(192, 132, 252))
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                setPadding(dp(5), dp(3), dp(5), dp(3))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(4).toFloat()
+                    setColor(Color.rgb(48, 38, 74))
+                    setStroke(dp(1), Color.rgb(192, 132, 252))
+                }
+                contentDescription = "Format stream $streamFormat"
+            }
+
             nameRow.addView(
                 name,
                 LinearLayout.LayoutParams(
@@ -2521,33 +2538,23 @@ class MainActivity : Activity() {
                 )
             )
 
-            val formatBadge = TextView(this).apply {
-                text = streamFormat
-                textSize = 9f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(192, 132, 252))
-                gravity = Gravity.CENTER
-                setPadding(dp(6), dp(2), dp(6), dp(2))
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(5).toFloat()
-                    setColor(Color.rgb(48, 38, 74))
-                    setStroke(dp(1), Color.rgb(192, 132, 252))
-                }
-                contentDescription = "Format stream $streamFormat"
-            }
-
             nameRow.addView(
                 formatBadge,
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    dp(43),
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    marginStart = dp(5)
+                    marginStart = dp(6)
                 }
             )
 
-            channelInfo.addView(nameRow)
+            channelInfo.addView(
+                nameRow,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
 
             val (currentProgramme, nextProgramme) = findEpgSchedule(entry)
             val currentText = TextView(this).apply {
