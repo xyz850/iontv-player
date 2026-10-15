@@ -16,8 +16,8 @@ android {
         applicationId = "id.example.iontvplayer"
         minSdk = 23
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1"
+        versionCode = 4
+        versionName = "1.2"
     }
     kotlinOptions {
         jvmTarget = "17"

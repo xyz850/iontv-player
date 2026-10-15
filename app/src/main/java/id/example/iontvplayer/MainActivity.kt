@@ -567,20 +567,7 @@ class MainActivity : Activity() {
                                 packageManager.getPackageInfo(packageName, 0).versionName
                             )
                             .setPositiveButton("Download Pembaruan") { _, _ ->
-                                try {
-                                    startActivity(
-                                        android.content.Intent(
-                                            android.content.Intent.ACTION_VIEW,
-                                            android.net.Uri.parse(downloadUrl)
-                                        )
-                                    )
-                                } catch (_: Exception) {
-                                    Toast.makeText(
-                                        this,
-                                        "Tautan download tidak dapat dibuka.",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
+                                downloadAndInstallUpdate(downloadUrl)
                             }
                             .setNegativeButton("Nanti Saja", null)
                             .show()
@@ -592,6 +579,140 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
         }, "cyber-neon-update-check").start()
+    }
+
+    private fun downloadAndInstallUpdate(downloadUrl: String) {
+        val uri = android.net.Uri.parse(downloadUrl)
+        if (uri.scheme != "https" || uri.host != "github.com") {
+            Toast.makeText(this, "Tautan pembaruan tidak valid.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= 26 &&
+            !packageManager.canRequestPackageInstalls()
+        ) {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Izin pemasangan diperlukan")
+                .setMessage("Izinkan pemasangan dari sumber ini, lalu kembali dan tekan Download Pembaruan lagi.")
+                .setPositiveButton("Buka Pengaturan") { _, _ ->
+                    startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            android.net.Uri.parse("package:$packageName")
+                        )
+                    )
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+            return
+        }
+
+        val progress = android.app.ProgressDialog(this).apply {
+            setTitle("Cyber Neon TV")
+            setMessage("Mengunduh pembaruan...")
+            setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
+            max = 100
+            setCancelable(false)
+            setProgress(0)
+            show()
+        }
+
+        Thread({
+            var connection: java.net.HttpURLConnection? = null
+            var file: java.io.File? = null
+            var error: String? = null
+
+            try {
+                val folder = java.io.File(cacheDir, "updates")
+                if (!folder.exists() && !folder.mkdirs()) {
+                    throw java.io.IOException("Folder unduhan tidak dapat dibuat.")
+                }
+
+                val apk = java.io.File(folder, "cyber-neon-tv-update.apk")
+                connection = (java.net.URL(downloadUrl).openConnection()
+                    as java.net.HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 30000
+                    instanceFollowRedirects = true
+                    useCaches = false
+                    setRequestProperty("Cache-Control", "no-cache")
+                }
+
+                if (connection.responseCode != 200) {
+                    throw java.io.IOException("Server gagal: HTTP ${connection.responseCode}")
+                }
+
+                val total = connection.contentLength.toLong()
+                var count = 0L
+                val buffer = ByteArray(65536)
+
+                connection.inputStream.use { input ->
+                    java.io.FileOutputStream(apk).use { output ->
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            output.write(buffer, 0, n)
+                            count += n
+
+                            if (total > 0) {
+                                val pct = ((count * 100) / total).toInt().coerceIn(0, 100)
+                                runOnUiThread {
+                                    if (!isFinishing && !isDestroyed) {
+                                        progress.setProgress(pct)
+                                        progress.setMessage("Mengunduh pembaruan... $pct%")
+                                    }
+                                }
+                            }
+                        }
+                        output.fd.sync()
+                    }
+                }
+
+                if (count < 1_000_000L) {
+                    throw java.io.IOException("Ukuran APK tidak wajar.")
+                }
+
+                val signature = ByteArray(2)
+                java.io.FileInputStream(apk).use {
+                    if (it.read(signature) != 2 ||
+                        signature[0] != 0x50.toByte() ||
+                        signature[1] != 0x4B.toByte()
+                    ) {
+                        throw java.io.IOException("File unduhan bukan APK yang valid.")
+                    }
+                }
+                file = apk
+            } catch (e: Exception) {
+                error = e.message ?: "Unduhan gagal."
+            } finally {
+                connection?.disconnect()
+            }
+
+            runOnUiThread {
+                progress.dismiss()
+                if (isFinishing || isDestroyed) return@runOnUiThread
+
+                val apk = file
+                if (apk == null) {
+                    Toast.makeText(this, "Unduhan gagal: $error", Toast.LENGTH_LONG).show()
+                    return@runOnUiThread
+                }
+
+                try {
+                    val contentUri = androidx.core.content.FileProvider.getUriForFile(
+                        this, "$packageName.fileprovider", apk
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        setDataAndType(contentUri, "application/vnd.android.package-archive")
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(intent)
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Pemasang Android tidak dapat dibuka.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }, "cyber-neon-apk-download").start()
     }
 
     private fun showSplash() {
