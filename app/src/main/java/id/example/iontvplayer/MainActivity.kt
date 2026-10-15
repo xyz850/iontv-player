@@ -831,7 +831,6 @@ class MainActivity : Activity() {
 
         val oldPlayerView = playerView
         val currentPlayer = player
-        val savedPosition = currentPlayer?.currentPosition ?: 0L
         val shouldResume = currentPlayer?.playWhenReady ?: false
         val savedResizeMode = oldPlayerView.resizeMode
 
@@ -842,8 +841,8 @@ class MainActivity : Activity() {
                 0
             }
 
-        // Hentikan sementara pemutaran saat permukaan video diganti.
-        currentPlayer?.playWhenReady = false
+        // Lepaskan tampilan lama tanpa menghentikan pemutaran atau
+        // memaksa stream live kembali ke posisi sebelumnya.
         oldPlayerView.player = null
 
         // Susun ulang UI sesuai orientasi perangkat.
@@ -872,9 +871,6 @@ class MainActivity : Activity() {
             playerView.player = currentPlayer
 
             if (currentPlayer != null) {
-                if (currentPlayer.currentMediaItem != null) {
-                    currentPlayer.seekTo(savedPosition)
-                }
                 currentPlayer.playWhenReady = shouldResume
             }
         }
