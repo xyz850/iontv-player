@@ -3182,6 +3182,17 @@ class MainActivity : Activity() {
                 }
             }
 
+            // Tombol untuk kembali ke tampilan landscape dengan daftar channel.
+            val channelListButton = makeButton("☰", "Tampilkan daftar channel")
+            toolbar.addView(
+                channelListButton,
+                LinearLayout.LayoutParams(dp(48), dp(44))
+            )
+            channelListButton.setOnClickListener {
+                // Kembali ke tampilan daftar tanpa memuat ulang siaran.
+                toggleFullscreen()
+            }
+
             val ccButton = makeButton("CC", "Aktifkan atau matikan subtitle")
             toolbar.addView(
                 ccButton,
