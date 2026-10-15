@@ -2497,8 +2497,8 @@ class MainActivity : Activity() {
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = dp(10).toFloat()
-                    setColor(Color.rgb(8, 17, 31))
-                    setStroke(dp(1), Color.rgb(0, 190, 220))
+                    setColor(Color.rgb(12, 13, 32))
+                    setStroke(dp(1), Color.rgb(139, 92, 246))
                 }
                 elevation = dp(1).toFloat()
                 isClickable = true
@@ -2508,12 +2508,12 @@ class MainActivity : Activity() {
                         ?.apply {
                             setColor(
                                 if (hasFocus) Color.rgb(10, 35, 48)
-                                else Color.rgb(8, 17, 31)
+                                else Color.rgb(12, 13, 32)
                             )
                             setStroke(
                                 dp(if (hasFocus) 3 else 1),
                                 if (hasFocus) Color.rgb(0, 245, 255)
-                                else Color.rgb(0, 190, 220)
+                                else Color.rgb(139, 92, 246)
                             )
                         }
                     focusedView.elevation =
