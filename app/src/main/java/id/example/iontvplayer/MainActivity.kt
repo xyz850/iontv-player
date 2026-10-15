@@ -3050,7 +3050,8 @@ class MainActivity : Activity() {
             brightnessPopup?.visibility = View.GONE
 
             if (fullscreen) {
-                fullscreenControlsView?.visibility = View.GONE
+                // Tombol playlist tetap terlihat saat fullscreen.
+                fullscreenControlsView?.visibility = View.VISIBLE
             }
             if (::playerView.isInitialized) {
                 playerView.hideController()
@@ -3182,16 +3183,32 @@ class MainActivity : Activity() {
                 }
             }
 
-            // Tombol untuk kembali ke tampilan landscape dengan daftar channel.
-            val channelListButton = makeButton("☰", "Tampilkan daftar channel")
-            toolbar.addView(
-                channelListButton,
-                LinearLayout.LayoutParams(dp(48), dp(44))
-            )
+            // Tombol playlist berdiri sendiri di kanan bawah video.
+            val channelListButton = makeButton("☰", "Tampilkan daftar channel").apply {
+                textSize = 19f
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(0, 0, 0, 0)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.argb(190, 5, 8, 18))
+                    setStroke(dp(1), accent)
+                    cornerRadius = dp(8).toFloat()
+                }
+                elevation = dp(6).toFloat()
+            }
             channelListButton.setOnClickListener {
-                // Kembali ke tampilan daftar tanpa memuat ulang siaran.
                 toggleFullscreen()
             }
+            fullscreenControls.addView(
+                channelListButton,
+                FrameLayout.LayoutParams(
+                    dp(44), dp(40),
+                    Gravity.BOTTOM or Gravity.END
+                ).apply {
+                    rightMargin = dp(12)
+                    bottomMargin = dp(12)
+                }
+            )
 
             val ccButton = makeButton("CC", "Aktifkan atau matikan subtitle")
             toolbar.addView(
@@ -3260,17 +3277,9 @@ class MainActivity : Activity() {
                 exo.trackSelectionParameters = builder.build()
             }
 
-            fullscreenControls.addView(
-                toolbar,
-                FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    dp(48),
-                    Gravity.TOP
-                )
-            )
-            // Toolbar tampil ketika kontrol fullscreen dimunculkan.
-            // Lapisan kontrol akan disembunyikan otomatis setelah 4 detik.
-            toolbar.visibility = View.VISIBLE
+            // Toolbar atas tidak ditampilkan saat fullscreen.
+            // Tombol playlist berada sendiri di kanan bawah video.
+            toolbar.visibility = View.GONE
 
             // Menu ukuran video: satu ikon untuk membuka/tutup pilihan.
             val sizeModes = listOf(
@@ -3606,7 +3615,8 @@ class MainActivity : Activity() {
             videoOverlayControls.forEach {
                 it.visibility = View.GONE
             }
-            fullscreenControlsView?.visibility = View.GONE
+            // Playlist tetap tampil di kanan bawah saat fullscreen.
+            fullscreenControlsView?.visibility = View.VISIBLE
 
             hideControlsRunnable?.let {
                 controlsHandler.removeCallbacks(it)
