@@ -379,11 +379,11 @@ class MainActivity : Activity() {
             .format(java.util.Date(timeMillis))
 
     private val fixedPlaylistUrl = "https://bit.ly/KPL203"
-    private val bg = Color.rgb(5, 8, 18)
-    private val panel = Color.rgb(16, 22, 36)
-    private val accent = Color.rgb(0, 245, 255)
+    private val bg = Color.rgb(9, 6, 22)
+    private val panel = Color.rgb(23, 11, 43)
+    private val accent = Color.rgb(157, 77, 255)
     private val white = Color.WHITE
-    private val muted = Color.rgb(157, 185, 200)
+    private val muted = Color.rgb(190, 160, 215)
     private var splashAnimator: android.animation.ValueAnimator? = null
     private var splashShowing = false
     private var splashTimeoutRunnable: Runnable? = null
