@@ -2583,37 +2583,21 @@ class MainActivity : Activity() {
     }
 
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
-        // Tunggu sampai area daftar memiliki lebar nyata.
-        if (channelGrid.width <= 0) {
-            channelGrid.post {
-                if (::channelGrid.isInitialized && channelGrid.width > 0) {
-                    renderChannelGrid(channels)
-                }
-            }
-            return
-        }
-
         channelGrid.removeAllViews()
         epgScheduleViews.clear()
         channelUrlStatusViews.clear()
         channelUrlIndicatorViews.clear()
+        channelGrid.columnCount = 1
 
-        val density = resources.displayMetrics.density
-        val gridWidthDp = (channelGrid.width / density).toInt()
-        val columns = when {
-            gridWidthDp < 420 -> 2
-            gridWidthDp < 650 -> 3
-            else -> 5
+        val screenWidthDp = resources.configuration.screenWidthDp
+        val landscapeLayout =
+            resources.configuration.orientation ==
+                android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val cardWidth = if (landscapeLayout) {
+            dp((screenWidthDp * 0.42f - 28).toInt().coerceAtLeast(220))
+        } else {
+            dp((screenWidthDp - 24).coerceAtLeast(240))
         }
-        channelGrid.columnCount = columns
-
-        // Sesuaikan lebar kartu dengan panel daftar yang sebenarnya.
-        val horizontalSpaceDp = 12
-        val cardMarginsDp = 6
-        val availableWidthDp =
-            (gridWidthDp - horizontalSpaceDp - columns * cardMarginsDp)
-                .coerceAtLeast(columns * 60)
-        val cardWidth = dp(availableWidthDp / columns)
 
         val visibleChannels = channels.filter { entry ->
             selectedChannelCategory == "SEMUA" ||
