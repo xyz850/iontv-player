@@ -519,6 +519,79 @@ class MainActivity : Activity() {
         buildUi()
         showSplash()
         restoreSavedPlaylist()
+        checkForAppUpdate()
+    }
+
+    private fun checkForAppUpdate() {
+        Thread({
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                val endpoint = java.net.URL(
+                    "https://raw.githubusercontent.com/xyz850/cyber-neon-tv-site/main/version.json"
+                )
+                connection = endpoint.openConnection() as java.net.HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                connection.useCaches = false
+                connection.setRequestProperty("Cache-Control", "no-cache")
+
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                val data = org.json.JSONObject(body)
+
+                val latestCode = data.optInt("versionCode", 0)
+                val latestName = data.optString("versionName", "")
+                val notes = data.optString(
+                    "releaseNotes",
+                    "Pembaruan Cyber Neon TV tersedia."
+                )
+                val downloadUrl = data.optString("downloadUrl", "")
+
+                val currentCode = packageManager
+                    .getPackageInfo(packageName, 0).versionCode
+
+                if (
+                    latestCode > currentCode &&
+                    latestName.isNotBlank() &&
+                    downloadUrl.startsWith("https://")
+                ) {
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+
+                        android.app.AlertDialog.Builder(this)
+                            .setTitle("⚡ Pembaruan Cyber Neon TV")
+                            .setMessage(
+                                "Versi baru $latestName tersedia!\n\n" +
+                                "$notes\n\n" +
+                                "Versi terpasang: " +
+                                packageManager.getPackageInfo(packageName, 0).versionName
+                            )
+                            .setPositiveButton("Download Pembaruan") { _, _ ->
+                                try {
+                                    startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(downloadUrl)
+                                        )
+                                    )
+                                } catch (_: Exception) {
+                                    Toast.makeText(
+                                        this,
+                                        "Tautan download tidak dapat dibuka.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                            .setNegativeButton("Nanti Saja", null)
+                            .show()
+                    }
+                }
+            } catch (_: Exception) {
+                // Jika offline atau server gagal, pemutar tetap berjalan normal.
+            } finally {
+                connection?.disconnect()
+            }
+        }, "cyber-neon-update-check").start()
     }
 
     private fun showSplash() {
