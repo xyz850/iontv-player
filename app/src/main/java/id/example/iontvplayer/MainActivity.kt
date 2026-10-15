@@ -2540,9 +2540,9 @@ class MainActivity : Activity() {
                     marginEnd = dp(8)
                 }
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                setBackgroundColor(Color.WHITE)
+                setBackgroundColor(Color.TRANSPARENT)
                 setPadding(dp(2), dp(2), dp(2), dp(2))
-                setImageResource(android.R.drawable.ic_menu_gallery)
+                setImageResource(R.drawable.ic_cyber_neon_tv)
                 contentDescription = "Logo ${entry.name}"
             }
             card.addView(logo)
@@ -2711,41 +2711,7 @@ class MainActivity : Activity() {
             }
             channelGrid.addView(card, params)
 
-            val logoUrl = entry.logoUrl
-            if (!logoUrl.isNullOrBlank()) {
-                Thread {
-                    var connection: java.net.HttpURLConnection? = null
-                    try {
-                        connection = java.net.URL(logoUrl).openConnection()
-                            as java.net.HttpURLConnection
-                        connection.connectTimeout = 8000
-                        connection.readTimeout = 8000
-                        connection.instanceFollowRedirects = true
-                        connection.setRequestProperty(
-                            "User-Agent",
-                            "Mozilla/5.0 (Android) IONTVPlayer"
-                        )
 
-                        val bitmap = connection.inputStream.use {
-                            BitmapFactory.decodeStream(it)
-                        }
-
-                        if (bitmap != null) {
-                            runOnUiThread {
-                                if (!isFinishing && logo.parent != null) {
-                                    logo.scaleType = ImageView.ScaleType.FIT_CENTER
-                                    logo.adjustViewBounds = true
-                                    logo.setImageBitmap(bitmap)
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                        // Gunakan ikon pengganti jika logo gagal dimuat.
-                    } finally {
-                        connection?.disconnect()
-                    }
-                }.start()
-            }
         }
     }
 
