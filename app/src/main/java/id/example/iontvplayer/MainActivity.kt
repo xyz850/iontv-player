@@ -2001,6 +2001,56 @@ class MainActivity : Activity() {
             gearButton
         )
 
+        // Tombol website Cyber Neon TV di tengah bagian paling bawah layar.
+        val cyberWebsiteButton = android.widget.TextView(this).apply {
+            text = "🌐  WEBSITE"
+            textSize = 12f
+            letterSpacing = 0.08f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(0, 245, 255))
+            setPadding(dp(18), dp(4), dp(18), dp(4))
+            isClickable = true
+            isFocusable = true
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = dp(18).toFloat()
+                setColor(Color.rgb(7, 22, 36))
+                setStroke(dp(1), Color.rgb(0, 220, 255))
+            }
+            elevation = dp(3).toFloat()
+            contentDescription = "Buka website Cyber Neon TV"
+            setOnClickListener {
+                try {
+                    startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(
+                                "https://cyber-neon-tv-site.parabola-satellite.workers.dev"
+                            )
+                        )
+                    )
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        "Website tidak dapat dibuka",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+
+        root.addView(
+            cyberWebsiteButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(36)
+            ).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(5)
+                bottomMargin = dp(4)
+            }
+        )
+
         setContentView(root)
         settingsPanelView?.let { keepControlsVisibleWhileTouching(it) }
 
