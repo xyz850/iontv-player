@@ -1870,40 +1870,6 @@ class MainActivity : Activity() {
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
         }
 
-        // Tombol playlist tepat di sebelah kiri roda gigi.
-        // Tombol tetap melekat pada area video, termasuk saat fullscreen.
-        val mainPlaylistButton = android.widget.ImageButton(this).apply {
-            contentDescription = "Tampilkan daftar channel"
-            setImageResource(android.R.drawable.ic_menu_sort_by_size)
-            imageTintList =
-                android.content.res.ColorStateList.valueOf(accent)
-            setBackgroundColor(Color.TRANSPARENT)
-            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(5), dp(5), dp(5), dp(5))
-            setOnClickListener {
-                if (fullscreen) {
-                    toggleFullscreen()
-                }
-
-                swipeRefreshLayout.post {
-                    scroll.smoothScrollTo(0, 0)
-                    channelGrid.requestFocus()
-                }
-            }
-        }
-
-        videoContainer.addView(
-            mainPlaylistButton,
-            FrameLayout.LayoutParams(
-                dp(32),
-                dp(32),
-                Gravity.BOTTOM or Gravity.END
-            ).apply {
-                rightMargin = dp(44)
-                bottomMargin = dp(8)
-            }
-        )
-
         // Roda gigi tunggal di pojok kanan bawah area video.
         videoContainer.addView(
             gearButton,
@@ -3216,6 +3182,33 @@ class MainActivity : Activity() {
                     }
                 }
             }
+
+            // Tombol playlist berdiri sendiri di kanan bawah video.
+            val channelListButton = makeButton("☰", "Tampilkan daftar channel").apply {
+                textSize = 19f
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(0, 0, 0, 0)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.argb(190, 5, 8, 18))
+                    setStroke(dp(1), accent)
+                    cornerRadius = dp(8).toFloat()
+                }
+                elevation = dp(6).toFloat()
+            }
+            channelListButton.setOnClickListener {
+                toggleFullscreen()
+            }
+            fullscreenControls.addView(
+                channelListButton,
+                FrameLayout.LayoutParams(
+                    dp(44), dp(40),
+                    Gravity.BOTTOM or Gravity.END
+                ).apply {
+                    rightMargin = dp(12)
+                    bottomMargin = dp(12)
+                }
+            )
 
             val ccButton = makeButton("CC", "Aktifkan atau matikan subtitle")
             toolbar.addView(
