@@ -2086,6 +2086,15 @@ class MainActivity : Activity() {
             resources.configuration.orientation ==
                 android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
+        // Header merek dan folder berada di luar ScrollView channel.
+        val countryHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
         val mainContent = LinearLayout(this).apply {
             orientation = if (landscapeLayout) {
                 LinearLayout.HORIZONTAL
@@ -2099,6 +2108,13 @@ class MainActivity : Activity() {
             val channelSide = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
             }
+            channelSide.addView(
+                countryHeader,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
             channelSide.addView(
                 channelCategoryRow,
                 LinearLayout.LayoutParams(
@@ -2145,6 +2161,13 @@ class MainActivity : Activity() {
                 ).apply {
                     bottomMargin = dp(2)
                 }
+            )
+            mainContent.addView(
+                countryHeader,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
             )
             mainContent.addView(
                 channelCategoryRow,
@@ -2254,16 +2277,14 @@ class MainActivity : Activity() {
         }
         bottomCountryFolderStrip = countryFolderStrip
 
-        channelContent.addView(
+        countryHeader.addView(
             cyberNeonBrand,
-            channelContent.indexOfChild(channelGrid),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(28)
             )
         )
-        channelContent.addView(
+        countryHeader.addView(
             countryFolderStrip,
-            channelContent.indexOfChild(channelGrid),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
