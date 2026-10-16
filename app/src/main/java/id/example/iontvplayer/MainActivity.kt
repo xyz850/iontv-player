@@ -70,6 +70,7 @@ class MainActivity : Activity() {
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
     private var selectedChannelCategory = "SEMUA"
+    private val collapsedCountryGroups = mutableSetOf<String>()
     private var channelCategoryRefreshRunnable: Runnable? = null
 
     private val channelUrlStatuses = mutableMapOf<String, String>()
@@ -117,6 +118,7 @@ class MainActivity : Activity() {
     private data class PlaylistEntry(
         val name: String,
         val url: String,
+        val groupTitle: String? = null,
         val logoUrl: String? = null,
         val tvgId: String? = null,
         val headers: Map<String, String> = emptyMap(),
@@ -2608,6 +2610,79 @@ class MainActivity : Activity() {
         controlsHandler.post(task)
     }
 
+    private fun countryGroupFor(entry: PlaylistEntry): String {
+        val g = entry.groupTitle.orEmpty().uppercase()
+        return when {
+            "INDONESIA" in g || "AMBONTV" in g ||
+                "TV DAERAH" in g || "TV LOKAL" in g ||
+                "TVRI DAERAH" in g -> "INDONESIA"
+
+            "MALAYSIA" in g -> "MALAYSIA"
+            "SINGAPURA" in g || "SINGAPORE" in g -> "SINGAPURA"
+            "THAILAND" in g -> "THAILAND"
+            "CHINA" in g -> "CHINA"
+            "SOUTH KOREA" in g || "KOREA" in g -> "KOREA SELATAN"
+            "JAPAN" in g || "JEPANG" in g -> "JEPANG"
+            "FILIPINA" in g || "PHILIPPINES" in g -> "FILIPINA"
+            "BRUNEI" in g -> "BRUNEI"
+            g.trim() == "ITALIA" || g.trim() == "ITALY" -> "ITALIA"
+            "USA" in g || "UNITED STATES" in g -> "AMERIKA SERIKAT"
+
+            "SPORT" in g || "LIGA INGGRIS" in g ||
+                "LIGA SPANYOL" in g || "LIGA ITALIA" in g ||
+                "LIGA JERMAN" in g || "MOTOGP" in g ||
+                "TENNIS" in g || "VOLI" in g ||
+                "NBA" in g || "MLB" in g || "NFL" in g ||
+                "FIGHT" in g || "UPCOMING" in g ||
+                "LIVE EVENT" in g || "CHAMPION" in g ||
+                "SUPER LEAGUE" in g || "BADMINTON" in g ||
+                "BWF" in g || "AFF CUP" in g ||
+                "KLUB BOLA" in g -> "OLAHRAGA"
+
+            "KIDS" in g || "CHILDREN" in g ||
+                "ANAK" in g -> "ANAK-ANAK"
+
+            "NEWS" in g || "BERITA" in g -> "BERITA"
+
+            "RADIO" in g || "MUSIC" in g ||
+                "MUSIK" in g -> "RADIO & MUSIK"
+
+            "DOCUMENTARY" in g || "DOKUMENTER" in g ||
+                "KNOWLEDGE" in g || "PENGETAHUAN" in g ->
+                "DOKUMENTER & PENGETAHUAN"
+
+            "MOVIE" in g || "MOVIES" in g ||
+                "FILM" in g || "HBO" in g ||
+                "ENTERTAINMENT" in g || "LIFESTYLE" in g ||
+                "VISION+" in g -> "FILM & HIBURAN"
+
+            else -> "LAINNYA"
+        }
+    }
+
+    private fun countryGroupOrder(country: String): Int {
+        return listOf(
+            "INDONESIA",
+            "MALAYSIA",
+            "SINGAPURA",
+            "THAILAND",
+            "CHINA",
+            "KOREA SELATAN",
+            "JEPANG",
+            "FILIPINA",
+            "BRUNEI",
+            "ITALIA",
+            "AMERIKA SERIKAT",
+            "OLAHRAGA",
+            "FILM & HIBURAN",
+            "ANAK-ANAK",
+            "BERITA",
+            "RADIO & MUSIK",
+            "DOKUMENTER & PENGETAHUAN",
+            "LAINNYA"
+        ).indexOf(country).let { if (it < 0) 99 else it }
+    }
+
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
         if (channelGrid.width <= 0) {
             channelGrid.post {
@@ -2707,11 +2782,83 @@ class MainActivity : Activity() {
             }
         }
 
-        visibleChannels.forEach { entry ->
+        val groupedChannels = visibleChannels
+            .groupBy { countryGroupFor(it) }
+            .toList()
+            .sortedBy { countryGroupOrder(it.first) }
+
+        groupedChannels.forEach groupLoop@ { (country, countryChannels) ->
+            val groupHeader = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), dp(3), dp(8), dp(3))
+                isClickable = true
+                isFocusable = true
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(9).toFloat()
+                    setColor(Color.rgb(8, 17, 31))
+                    setStroke(dp(1), Color.rgb(0, 190, 220))
+                }
+            }
+
+            val groupTitleView = TextView(this).apply {
+                text = "$country  •  ${countryChannels.size} SIARAN"
+                textSize = 12f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(0, 245, 255))
+                gravity = Gravity.CENTER_VERTICAL
+                maxLines = 1
+            }
+
+            val groupArrow = ImageView(this).apply {
+                setImageResource(
+                    if (country in collapsedCountryGroups) {
+                        R.drawable.ic_group_arrow_down
+                    } else {
+                        R.drawable.ic_group_arrow_up
+                    }
+                )
+                scaleType = ImageView.ScaleType.CENTER
+                contentDescription = if (country in collapsedCountryGroups) {
+                    "Buka kelompok $country"
+                } else {
+                    "Tutup kelompok $country"
+                }
+            }
+
+            groupHeader.addView(
+                groupTitleView,
+                LinearLayout.LayoutParams(0, dp(38), 1f)
+            )
+            groupHeader.addView(
+                groupArrow,
+                LinearLayout.LayoutParams(dp(30), dp(38))
+            )
+
+            groupHeader.setOnClickListener {
+                if (!collapsedCountryGroups.add(country)) {
+                    collapsedCountryGroups.remove(country)
+                }
+                renderChannelGrid(channels)
+            }
+
+            channelGrid.addView(
+                groupHeader,
+                GridLayout.LayoutParams().apply {
+                    width = cardWidth
+                    height = dp(42)
+                    setMargins(dp(3), dp(5), dp(3), dp(2))
+                }
+            )
+
+            if (country in collapsedCountryGroups) return@groupLoop
+
+            countryChannels.forEach channelLoop@ { entry ->
             val index = playlistIndexByEntry[entry]
                 ?: playlistChannels.indexOfFirst { it.url == entry.url }
 
-            if (index < 0) return@forEach
+            if (index < 0) return@channelLoop
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -2932,8 +3079,7 @@ class MainActivity : Activity() {
                 setMargins(dp(3), dp(3), dp(3), dp(3))
             }
             channelGrid.addView(card, params)
-
-
+            }
         }
     }
 
@@ -4291,6 +4437,7 @@ class MainActivity : Activity() {
                                 PlaylistEntry(
                                     name = pendingName!!,
                                     url = resolved,
+                                    groupTitle = pendingGroupTitle,
                                     logoUrl = pendingLogoUrl,
                                     tvgId = pendingTvgId,
                                     headers = pendingHeaders.toMap(),
