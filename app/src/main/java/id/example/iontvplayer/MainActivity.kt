@@ -2848,6 +2848,8 @@ class MainActivity : Activity() {
             .sortedBy { countryGroupOrder(it.first) }
 
         groupedChannels.forEach groupLoop@ { (country, countryChannels) ->
+            if (country in collapsedCountryGroups) return@groupLoop
+
             val groupHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -2881,8 +2883,6 @@ class MainActivity : Activity() {
                     setMargins(dp(3), dp(5), dp(3), dp(2))
                 }
             )
-
-            if (country in collapsedCountryGroups) return@groupLoop
 
             countryChannels.forEach channelLoop@ { entry ->
             val index = playlistIndexByEntry[entry]
@@ -4271,6 +4271,10 @@ class MainActivity : Activity() {
                         loadedPlaylistUrl = url
                         playlistRequestHeaders = headers.toMap()
                         playlistChannels = channels
+                        collapsedCountryGroups.clear()
+                        collapsedCountryGroups.addAll(
+                            channels.map { countryGroupFor(it) }.distinct()
+                        )
                         renderChannelGrid(channels)
                         startEpgScheduleRefresh()
                         loadEpgSchedule()
