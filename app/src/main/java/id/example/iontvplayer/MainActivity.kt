@@ -94,6 +94,9 @@ class MainActivity : Activity() {
     private var channelCategoryRefreshRunnable: Runnable? = null
 
     private val channelUrlStatuses = mutableMapOf<String, String>()
+    private val checkedChannelUrls = mutableSetOf<String>()
+    private val countryUrlScansInProgress = mutableMapOf<String, Int>()
+    private var playlistScanGeneration = 0
     private val channelUrlDetails = mutableMapOf<String, String>()
     private val channelUrlStatusViews =
         mutableMapOf<String, MutableList<TextView>>()
@@ -2663,6 +2666,63 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun scanCountryFolderUrls(country: String) {
+        if (isFinishing || isDestroyed || playlistChannels.isEmpty()) return
+
+        val scanGeneration = playlistScanGeneration
+        if (countryUrlScansInProgress[country] == scanGeneration) return
+
+        val entries = playlistChannels
+            .filter { countryGroupFor(it) == country }
+            .distinctBy { it.url }
+            .filter { it.url !in checkedChannelUrls }
+
+        if (entries.isEmpty()) return
+
+        countryUrlScansInProgress[country] = scanGeneration
+        entries.forEach { entry ->
+            updateChannelUrlStatus(
+                entry.url,
+                "MEMERIKSA",
+                "Memeriksa folder $country"
+            )
+        }
+
+        val remaining =
+            java.util.concurrent.atomic.AtomicInteger(entries.size)
+
+        entries.forEach { entry ->
+            try {
+                urlCheckExecutor.execute {
+                    val result = checkChannelUrl(entry)
+
+                    runOnUiThread {
+                        if (scanGeneration == playlistScanGeneration &&
+                            !isFinishing && !isDestroyed &&
+                            playlistChannels.any { it.url == entry.url }) {
+                            checkedChannelUrls.add(entry.url)
+                            updateChannelUrlStatus(
+                                entry.url,
+                                result.first,
+                                result.second
+                            )
+                        }
+
+                        if (remaining.decrementAndGet() == 0 &&
+                            countryUrlScansInProgress[country] == scanGeneration) {
+                            countryUrlScansInProgress.remove(country)
+                        }
+                    }
+                }
+            } catch (_: java.util.concurrent.RejectedExecutionException) {
+                if (remaining.decrementAndGet() == 0 &&
+                    countryUrlScansInProgress[country] == scanGeneration) {
+                    countryUrlScansInProgress.remove(country)
+                }
+            }
+        }
+    }
+
     private fun startUrlMonitoring() {
         urlMonitorRunnable?.let { controlsHandler.removeCallbacks(it) }
 
@@ -2829,6 +2889,7 @@ class MainActivity : Activity() {
                 collapsedCountryGroups.addAll(allGroups)
                 collapsedCountryGroups.remove(country)
                 renderChannelGrid(playlistChannels)
+                scanCountryFolderUrls(country)
             }
 
             strip.addView(
@@ -4336,6 +4397,11 @@ class MainActivity : Activity() {
                         status.text =
                             "Playlist tidak berisi channel yang dikenali. Periksa format M3U."
                     } else {
+                        playlistScanGeneration++
+                        checkedChannelUrls.clear()
+                        channelUrlStatuses.clear()
+                        channelUrlDetails.clear()
+                        countryUrlScansInProgress.clear()
                         loadedPlaylistUrl = url
                         playlistRequestHeaders = headers.toMap()
                         playlistChannels = channels
