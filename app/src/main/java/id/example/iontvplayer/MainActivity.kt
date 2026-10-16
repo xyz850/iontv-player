@@ -101,6 +101,10 @@ class MainActivity : Activity() {
     private val channelUrlDetails = mutableMapOf<String, String>()
     private val channelUrlStatusViews =
         mutableMapOf<String, MutableList<TextView>>()
+    private val channelQualityLabels = mutableMapOf<String, String>()
+    private val channelQualityBadgeViews =
+        mutableMapOf<String, MutableList<TextView>>()
+    private var activeQualityStreamUrl: String? = null
     private val channelUrlIndicatorViews =
         mutableMapOf<String, MutableList<View>>()
     private var channelUrlBlinkRunnable: Runnable? = null
@@ -2937,6 +2941,7 @@ class MainActivity : Activity() {
         channelGrid.removeAllViews()
         epgScheduleViews.clear()
         channelUrlStatusViews.clear()
+        channelQualityBadgeViews.clear()
         channelUrlIndicatorViews.clear()
         channelGrid.columnCount = 1
 
@@ -3223,7 +3228,38 @@ class MainActivity : Activity() {
                 isSingleLine = true
             }
             statusRow.addView(statusBadge)
+
+            val qualityBadge = TextView(this).apply {
+                text = channelQualityLabels[entry.url] ?: "—"
+                textSize = 8f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                isSingleLine = true
+                setPadding(dp(5), dp(3), dp(5), dp(3))
+                setTextColor(Color.rgb(157, 185, 200))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(4).toFloat()
+                    setColor(Color.rgb(24, 34, 48))
+                    setStroke(dp(1), Color.rgb(100, 116, 139))
+                }
+                contentDescription = "Kualitas video"
+            }
+            statusRow.addView(
+                qualityBadge,
+                LinearLayout.LayoutParams(
+                    dp(39),
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = dp(5)
+                }
+            )
             card.addView(statusRow)
+
+            channelQualityBadgeViews.getOrPut(entry.url) {
+                mutableListOf()
+            }.add(qualityBadge)
 
             channelUrlIndicatorViews.getOrPut(entry.url) {
                 mutableListOf()
@@ -4794,6 +4830,34 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun updateChannelQualityBadge(url: String, label: String) {
+        channelQualityLabels[url] = label
+
+        val color = when (label) {
+            "FHD" -> Color.rgb(0, 245, 255)
+            "HD" -> Color.rgb(74, 222, 128)
+            "SD" -> Color.rgb(250, 204, 21)
+            else -> Color.rgb(157, 185, 200)
+        }
+        val backgroundColor = when (label) {
+            "FHD" -> Color.rgb(8, 45, 55)
+            "HD" -> Color.rgb(15, 48, 36)
+            "SD" -> Color.rgb(52, 43, 16)
+            else -> Color.rgb(24, 34, 48)
+        }
+
+        channelQualityBadgeViews[url]?.forEach { badge ->
+            badge.text = label
+            badge.contentDescription = "Kualitas video $label"
+            badge.setTextColor(color)
+            (badge.background as? android.graphics.drawable.GradientDrawable)
+                ?.apply {
+                    setColor(backgroundColor)
+                    setStroke(dp(1), color)
+                }
+        }
+    }
+
     private fun playMedia(
         url: String,
         headers: Map<String, String>,
@@ -4802,6 +4866,8 @@ class MainActivity : Activity() {
         drmLicenseHeaders: Map<String, String> = emptyMap()
     ) {
         releasePlayer()
+        activeQualityStreamUrl = url
+        updateChannelQualityBadge(url, "—")
 
         if (::resolutionSpinner.isInitialized) {
             updatingResolution = true
@@ -5026,6 +5092,23 @@ class MainActivity : Activity() {
                         override fun onVideoSizeChanged(
                             videoSize: androidx.media3.common.VideoSize
                         ) {
+                            if (activeQualityStreamUrl == url) {
+                                val longSide = maxOf(
+                                    videoSize.width,
+                                    videoSize.height
+                                )
+                                val quality = when {
+                                    longSide >= 1080 -> "FHD"
+                                    longSide >= 720 -> "HD"
+                                    longSide > 0 -> "SD"
+                                    else -> "—"
+                                }
+
+                                if (quality != "—") {
+                                    updateChannelQualityBadge(url, quality)
+                                }
+                            }
+
                             android.util.Log.d(
                                 "IONTVPlayer",
                                 "Video size: ${videoSize.width}x${videoSize.height}, rotation=${videoSize.unappliedRotationDegrees}"
