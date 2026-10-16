@@ -74,6 +74,7 @@ class MainActivity : Activity() {
     private var countryFolderListVisible = false
     private var bottomCountryGroupsButton: android.widget.ImageButton? = null
     private var bottomCountryFolderStrip: LinearLayout? = null
+    private var bottomCountryFolderScroll: ScrollView? = null
 
     private fun updateCountryGroupsToggleButton() {
         bottomCountryGroupsButton?.apply {
@@ -2280,6 +2281,21 @@ class MainActivity : Activity() {
         }
         bottomCountryFolderStrip = countryFolderStrip
 
+        val countryFolderScroll = ScrollView(this).apply {
+            isFillViewport = false
+            isVerticalScrollBarEnabled = true
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            visibility = if (countryFolderListVisible) View.VISIBLE else View.GONE
+            addView(
+                countryFolderStrip,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+        }
+        bottomCountryFolderScroll = countryFolderScroll
+
         countryHeader.addView(
             cyberNeonBrand,
             LinearLayout.LayoutParams(
@@ -2287,10 +2303,10 @@ class MainActivity : Activity() {
             )
         )
         countryHeader.addView(
-            countryFolderStrip,
+            countryFolderScroll,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                dp(if (landscapeLayout) 100 else 120)
             )
         )
 
@@ -2818,6 +2834,8 @@ class MainActivity : Activity() {
         strip.removeAllViews()
 
         strip.visibility =
+            if (countryFolderListVisible) View.VISIBLE else View.GONE
+        bottomCountryFolderScroll?.visibility =
             if (countryFolderListVisible) View.VISIBLE else View.GONE
 
         if (!countryFolderListVisible || playlistChannels.isEmpty()) return
