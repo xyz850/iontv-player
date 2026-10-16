@@ -71,6 +71,28 @@ class MainActivity : Activity() {
     private var loadedPlaylistUrl: String? = null
     private var selectedChannelCategory = "SEMUA"
     private val collapsedCountryGroups = mutableSetOf<String>()
+    private var bottomCountryGroupsButton: android.widget.ImageButton? = null
+
+    private fun updateCountryGroupsToggleButton() {
+        val groups = playlistChannels.map { countryGroupFor(it) }.distinct()
+        val allCollapsed = groups.isNotEmpty() &&
+            groups.all { it in collapsedCountryGroups }
+
+        bottomCountryGroupsButton?.apply {
+            setImageResource(
+                if (allCollapsed) {
+                    R.drawable.ic_group_arrow_down
+                } else {
+                    R.drawable.ic_group_arrow_up
+                }
+            )
+            contentDescription = if (allCollapsed) {
+                "Buka semua folder negara"
+            } else {
+                "Tutup semua folder negara"
+            }
+        }
+    }
     private var channelCategoryRefreshRunnable: Runnable? = null
 
     private val channelUrlStatuses = mutableMapOf<String, String>()
@@ -2246,6 +2268,43 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(0, 1, 1f)
         )
 
+        bottomCountryGroupsButton = android.widget.ImageButton(this).apply {
+            setImageResource(R.drawable.ic_group_arrow_up)
+            imageTintList =
+                android.content.res.ColorStateList.valueOf(accent)
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            contentDescription = "Tutup semua folder negara"
+
+            setOnClickListener {
+                val groups = playlistChannels
+                    .map { countryGroupFor(it) }
+                    .distinct()
+
+                val allCollapsed = groups.isNotEmpty() &&
+                    groups.all { it in collapsedCountryGroups }
+
+                if (allCollapsed) {
+                    collapsedCountryGroups.removeAll(groups.toSet())
+                } else {
+                    collapsedCountryGroups.addAll(groups)
+                }
+
+                updateCountryGroupsToggleButton()
+                if (playlistChannels.isNotEmpty()) {
+                    renderChannelGrid(playlistChannels)
+                }
+            }
+        }
+
+        bottomExitBar.addView(
+            bottomCountryGroupsButton,
+            LinearLayout.LayoutParams(dp(38), dp(38)).apply {
+                marginEnd = dp(2)
+            }
+        )
+
         bottomExitBar.addView(
             bottomExitButton,
             LinearLayout.LayoutParams(dp(42), dp(38))
@@ -2684,6 +2743,7 @@ class MainActivity : Activity() {
     }
 
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
+        updateCountryGroupsToggleButton()
         if (channelGrid.width <= 0) {
             channelGrid.post {
                 if (::channelGrid.isInitialized && channelGrid.width > 0) {
@@ -2792,8 +2852,6 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(10), dp(3), dp(8), dp(3))
-                isClickable = true
-                isFocusable = true
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = dp(9).toFloat()
@@ -2811,38 +2869,10 @@ class MainActivity : Activity() {
                 maxLines = 1
             }
 
-            val groupArrow = ImageView(this).apply {
-                setImageResource(
-                    if (country in collapsedCountryGroups) {
-                        R.drawable.ic_group_arrow_down
-                    } else {
-                        R.drawable.ic_group_arrow_up
-                    }
-                )
-                scaleType = ImageView.ScaleType.CENTER
-                contentDescription = if (country in collapsedCountryGroups) {
-                    "Buka kelompok $country"
-                } else {
-                    "Tutup kelompok $country"
-                }
-            }
-
             groupHeader.addView(
                 groupTitleView,
                 LinearLayout.LayoutParams(0, dp(38), 1f)
             )
-            groupHeader.addView(
-                groupArrow,
-                LinearLayout.LayoutParams(dp(30), dp(38))
-            )
-
-            groupHeader.setOnClickListener {
-                if (!collapsedCountryGroups.add(country)) {
-                    collapsedCountryGroups.remove(country)
-                }
-                renderChannelGrid(channels)
-            }
-
             channelGrid.addView(
                 groupHeader,
                 GridLayout.LayoutParams().apply {
