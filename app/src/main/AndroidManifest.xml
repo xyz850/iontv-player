@@ -13,8 +13,8 @@
     <application
         android:icon="@drawable/iontv_icon"
         android:roundIcon="@drawable/iontv_icon"
-        android:allowBackup="true"
-        android:label="Cyber Neon TV"
+        android:allowBackup="false"
+        android:label="Cyber Neon TV Baru"
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
         <activity

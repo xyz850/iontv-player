@@ -336,7 +336,7 @@ class MainActivity : Activity() {
                     if (playlistChannels.isNotEmpty()) {
                         renderChannelGrid(playlistChannels)
                     }
-                    android.util.Log.w("IONTV-EPG", "Gagal memuat EPG", e)
+                    android.util.Log.w("IONTV-EPG", "Gagal memuat EPG: ${e.javaClass.simpleName}")
                     scheduleEpgRetry()
                 }
             } finally {
@@ -4725,7 +4725,7 @@ class MainActivity : Activity() {
                             }
                             val detail = causes.joinToString("\n")
                             diagnosticStatus.text = "GAGAL ${error.errorCodeName} (${error.errorCode})\n$detail"
-                            android.util.Log.e("IONTVPlayer", "Playback error:\n$detail", error)
+                            android.util.Log.e("IONTVPlayer", "Playback error: ${error.errorCodeName}")
                         }
                     })
                     exo.prepare()
