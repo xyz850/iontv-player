@@ -2234,59 +2234,40 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(0, 1, 1f)
         )
 
-        // Identitas merek di tengah antara refresh dan exit.
+        // Merek Cyber Neon TV berada di atas folder negara.
         val cyberNeonBrand = TextView(this).apply {
             text = "C Y B E R • N E O N • T V"
             setTextColor(accent)
-            textSize = 15f
+            textSize = 11f
             letterSpacing = 0.015f
             gravity = Gravity.CENTER
             maxLines = 1
             includeFontPadding = false
-            setShadowLayer(
-                dp(5).toFloat(),
-                0f,
-                0f,
-                Color.rgb(0, 180, 220)
-            )
+            setShadowLayer(dp(4).toFloat(), 0f, 0f, Color.rgb(0, 180, 220))
             contentDescription = "Cyber Neon TV"
         }
 
-        bottomExitBar.addView(
-            cyberNeonBrand,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(38)
-            )
-        )
-
-        // Deretan folder negara berada di sebelah kiri tombol panah.
-        val countryFolderScroll = android.widget.HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            visibility = View.VISIBLE
-        }
-
         val countryFolderStrip = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.TOP
             visibility = if (countryFolderListVisible) View.VISIBLE else View.GONE
         }
         bottomCountryFolderStrip = countryFolderStrip
 
-        countryFolderScroll.addView(
-            countryFolderStrip,
-            android.widget.FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+        channelContent.addView(
+            cyberNeonBrand,
+            channelContent.indexOfChild(channelGrid),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(28)
             )
         )
-
-        bottomExitBar.addView(
-            countryFolderScroll,
-            LinearLayout.LayoutParams(0, dp(38), 1f).apply {
-                marginEnd = dp(2)
-            }
+        channelContent.addView(
+            countryFolderStrip,
+            channelContent.indexOfChild(channelGrid),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         )
 
         bottomCountryGroupsButton = android.widget.ImageButton(this).apply {
@@ -2771,7 +2752,7 @@ class MainActivity : Activity() {
             val chip = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(7), dp(3), dp(8), dp(3))
+                setPadding(dp(5), dp(1), dp(6), dp(1))
                 background = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = dp(8).toFloat()
@@ -2797,14 +2778,14 @@ class MainActivity : Activity() {
 
             chip.addView(
                 icon,
-                LinearLayout.LayoutParams(dp(21), dp(21)).apply {
+                LinearLayout.LayoutParams(dp(16), dp(16)).apply {
                     marginEnd = dp(4)
                 }
             )
 
             val title = TextView(this).apply {
                 text = country
-                textSize = 10f
+                textSize = 9f
                 maxLines = 1
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(Color.rgb(0, 245, 255))
@@ -2832,10 +2813,10 @@ class MainActivity : Activity() {
             strip.addView(
                 chip,
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    dp(32)
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    dp(26)
                 ).apply {
-                    marginEnd = dp(5)
+                    bottomMargin = dp(3)
                 }
             )
         }
