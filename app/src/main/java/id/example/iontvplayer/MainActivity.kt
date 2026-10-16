@@ -387,6 +387,8 @@ class MainActivity : Activity() {
     private var splashAnimator: android.animation.ValueAnimator? = null
     private var splashShowing = false
     private var splashTimeoutRunnable: Runnable? = null
+    private var splashStartedAtMs = 0L
+    private var splashMinDismissRunnable: Runnable? = null
     private var videoLoadingOverlay: FrameLayout? = null
     private var videoLoadingMark: View? = null
     private var videoLoadingAnimator: android.animation.ValueAnimator? = null
@@ -897,6 +899,9 @@ class MainActivity : Activity() {
         )
 
         splashShowing = true
+        splashStartedAtMs = android.os.SystemClock.elapsedRealtime()
+        splashMinDismissRunnable?.let { window.decorView.removeCallbacks(it) }
+        splashMinDismissRunnable = null
         setContentView(splash)
         splashAnimator?.cancel()
         splashAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
@@ -1021,12 +1026,33 @@ class MainActivity : Activity() {
 
     private fun dismissSplash() {
         if (!splashShowing) return
+
+        // Pertahankan loading awal minimal 3 detik.
+        val elapsed = android.os.SystemClock.elapsedRealtime() - splashStartedAtMs
+        val remaining = 3000L - elapsed
+        if (remaining > 0L) {
+            if (splashMinDismissRunnable == null) {
+                val pending = Runnable {
+                    splashMinDismissRunnable = null
+                    dismissSplash()
+                }
+                splashMinDismissRunnable = pending
+                window.decorView.postDelayed(pending, remaining)
+            }
+            return
+        }
+
         splashShowing = false
 
         splashTimeoutRunnable?.let {
             window.decorView.removeCallbacks(it)
         }
         splashTimeoutRunnable = null
+
+        splashMinDismissRunnable?.let {
+            window.decorView.removeCallbacks(it)
+        }
+        splashMinDismissRunnable = null
 
         splashAnimator?.cancel()
         splashAnimator = null
