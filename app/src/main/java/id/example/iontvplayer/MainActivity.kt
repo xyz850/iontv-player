@@ -73,6 +73,7 @@ class MainActivity : Activity() {
     private val collapsedCountryGroups = mutableSetOf<String>()
     private var countryFolderListVisible = false
     private var bottomCountryGroupsButton: android.widget.ImageButton? = null
+    private var bottomCountryFolderStrip: LinearLayout? = null
 
     private fun updateCountryGroupsToggleButton() {
         bottomCountryGroupsButton?.apply {
@@ -2259,10 +2260,33 @@ class MainActivity : Activity() {
             )
         )
 
-        // Ruang fleksibel kanan menjaga jarak menuju tombol exit.
+        // Deretan folder negara berada di sebelah kiri tombol panah.
+        val countryFolderScroll = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            visibility = View.VISIBLE
+        }
+
+        val countryFolderStrip = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = if (countryFolderListVisible) View.VISIBLE else View.GONE
+        }
+        bottomCountryFolderStrip = countryFolderStrip
+
+        countryFolderScroll.addView(
+            countryFolderStrip,
+            android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
         bottomExitBar.addView(
-            View(this),
-            LinearLayout.LayoutParams(0, 1, 1f)
+            countryFolderScroll,
+            LinearLayout.LayoutParams(0, dp(38), 1f).apply {
+                marginEnd = dp(2)
+            }
         )
 
         bottomCountryGroupsButton = android.widget.ImageButton(this).apply {
@@ -2727,6 +2751,96 @@ class MainActivity : Activity() {
         ).indexOf(country).let { if (it < 0) 99 else it }
     }
 
+    private fun updateCountryFolderStrip() {
+        val strip = bottomCountryFolderStrip ?: return
+        strip.removeAllViews()
+
+        strip.visibility =
+            if (countryFolderListVisible) View.VISIBLE else View.GONE
+
+        if (!countryFolderListVisible || playlistChannels.isEmpty()) return
+
+        val groups = playlistChannels
+            .groupBy { countryGroupFor(it) }
+            .toList()
+            .sortedBy { countryGroupOrder(it.first) }
+
+        groups.forEach { (country, entries) ->
+            val selected = country !in collapsedCountryGroups
+
+            val chip = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(7), dp(3), dp(8), dp(3))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = dp(8).toFloat()
+                    setColor(Color.rgb(8, 17, 31))
+                    setStroke(
+                        dp(1),
+                        if (selected) Color.rgb(0, 245, 255)
+                        else Color.rgb(55, 85, 105)
+                    )
+                }
+                isClickable = true
+                isFocusable = true
+                contentDescription = "Buka folder $country"
+            }
+
+            val icon = android.widget.ImageView(this).apply {
+                setImageResource(
+                    if (selected) R.drawable.ic_country_folder_open
+                    else R.drawable.ic_country_folder_closed
+                )
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            }
+
+            chip.addView(
+                icon,
+                LinearLayout.LayoutParams(dp(21), dp(21)).apply {
+                    marginEnd = dp(4)
+                }
+            )
+
+            val title = TextView(this).apply {
+                text = country
+                textSize = 10f
+                maxLines = 1
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(Color.rgb(0, 245, 255))
+            }
+
+            chip.addView(
+                title,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            )
+
+            chip.setOnClickListener {
+                val allGroups = playlistChannels
+                    .map { countryGroupFor(it) }
+                    .distinct()
+
+                collapsedCountryGroups.clear()
+                collapsedCountryGroups.addAll(allGroups)
+                collapsedCountryGroups.remove(country)
+                renderChannelGrid(playlistChannels)
+            }
+
+            strip.addView(
+                chip,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    dp(32)
+                ).apply {
+                    marginEnd = dp(5)
+                }
+            )
+        }
+    }
+
     private fun renderChannelGrid(channels: List<PlaylistEntry>) {
         updateCountryGroupsToggleButton()
         if (channelGrid.width <= 0) {
@@ -2738,6 +2852,7 @@ class MainActivity : Activity() {
             return
         }
 
+        updateCountryFolderStrip()
         channelGrid.removeAllViews()
         epgScheduleViews.clear()
         channelUrlStatusViews.clear()
@@ -2833,79 +2948,6 @@ class MainActivity : Activity() {
             .sortedBy { countryGroupOrder(it.first) }
 
         groupedChannels.forEach groupLoop@ { (country, countryChannels) ->
-            val groupHeader = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(3), dp(8), dp(3))
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(9).toFloat()
-                    setColor(Color.rgb(8, 17, 31))
-                    setStroke(dp(1), Color.rgb(0, 190, 220))
-                }
-            }
-
-            val groupTitleView = TextView(this).apply {
-                text = "$country  •  ${countryChannels.size} SIARAN"
-                textSize = 12f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.rgb(0, 245, 255))
-                gravity = Gravity.CENTER_VERTICAL
-                maxLines = 1
-            }
-
-            val folderIcon = android.widget.ImageView(this).apply {
-                setImageResource(
-                    if (country in collapsedCountryGroups) {
-                        R.drawable.ic_country_folder_closed
-                    } else {
-                        R.drawable.ic_country_folder_open
-                    }
-                )
-                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-                contentDescription = if (country in collapsedCountryGroups) {
-                    "Folder $country tertutup"
-                } else {
-                    "Folder $country terbuka"
-                }
-            }
-
-            groupHeader.addView(
-                folderIcon,
-                LinearLayout.LayoutParams(dp(26), dp(26)).apply {
-                    marginEnd = dp(8)
-                }
-            )
-            groupHeader.addView(
-                groupTitleView,
-                LinearLayout.LayoutParams(0, dp(38), 1f)
-            )
-
-            groupHeader.isClickable = true
-            groupHeader.isFocusable = true
-            groupHeader.setOnClickListener {
-                if (country in collapsedCountryGroups) {
-                    val allGroups = playlistChannels
-                        .map { countryGroupFor(it) }
-                        .distinct()
-                    collapsedCountryGroups.clear()
-                    collapsedCountryGroups.addAll(allGroups)
-                    collapsedCountryGroups.remove(country)
-                    renderChannelGrid(playlistChannels)
-                }
-            }
-
-            if (countryFolderListVisible) {
-                channelGrid.addView(
-                    groupHeader,
-                    GridLayout.LayoutParams().apply {
-                        width = cardWidth
-                        height = dp(42)
-                        setMargins(dp(3), dp(5), dp(3), dp(2))
-                    }
-                )
-            }
-
             if (country in collapsedCountryGroups) return@groupLoop
 
             countryChannels.forEach channelLoop@ { entry ->
