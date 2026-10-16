@@ -2278,7 +2278,7 @@ class MainActivity : Activity() {
                         android.content.Intent(
                             android.content.Intent.ACTION_VIEW,
                             android.net.Uri.parse(
-                                "https://xyz850.github.io/cyber-neon-tv-site/"
+                                "https://cyber-neon-tv-site.parabola-satellite.workers.dev/"
                             )
                         )
                     )
