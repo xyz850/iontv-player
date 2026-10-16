@@ -13,11 +13,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "id.example.cyberneontvnew"
+        applicationId = "id.example.cyberneontv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 1
-        versionName = "2.0"
+        versionCode = 5
+        versionName = "1.3"
     }
     signingConfigs {
         create("stable") {
