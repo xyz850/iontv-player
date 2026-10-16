@@ -1055,7 +1055,7 @@ class MainActivity : Activity() {
                 ) ?: ""
             )
 
-            status.text = "Memuat daftar channel tersimpan…"
+            status.text = ""
             val headers = mutableMapOf<String, String>()
             refererInput.text.toString().trim()
                 .takeIf { it.isNotEmpty() }
