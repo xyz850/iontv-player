@@ -1,4 +1,5 @@
 package id.example.iontvplayer
+import android.animation.ValueAnimator
 import android.net.Uri
 import android.util.Base64
 
@@ -105,6 +106,12 @@ class MainActivity : Activity() {
     private val channelQualityBadgeViews =
         mutableMapOf<String, MutableList<TextView>>()
     private var activeQualityStreamUrl: String? = null
+
+    // Bingkai RGB hanya berjalan pada kartu channel yang sedang diputar.
+    private var activeChannelCardUrl: String? = null
+    private val channelCardViews =
+        mutableMapOf<String, MutableList<LinearLayout>>()
+    private var channelCardNeonAnimator: ValueAnimator? = null
     private val channelUrlIndicatorViews =
         mutableMapOf<String, MutableList<View>>()
     private var channelUrlBlinkRunnable: Runnable? = null
@@ -2938,6 +2945,9 @@ class MainActivity : Activity() {
         }
 
         updateCountryFolderStrip()
+        channelCardNeonAnimator?.cancel()
+        channelCardNeonAnimator = null
+        channelCardViews.clear()
         channelGrid.removeAllViews()
         epgScheduleViews.clear()
         channelUrlStatusViews.clear()
@@ -3061,16 +3071,22 @@ class MainActivity : Activity() {
                                 if (hasFocus) Color.rgb(10, 35, 48)
                                 else Color.rgb(12, 13, 32)
                             )
-                            setStroke(
-                                dp(if (hasFocus) 3 else 1),
-                                if (hasFocus) Color.rgb(0, 245, 255)
-                                else Color.rgb(139, 92, 246)
-                            )
+                            if (activeChannelCardUrl != entry.url) {
+                                setStroke(
+                                    dp(if (hasFocus) 3 else 1),
+                                    if (hasFocus) Color.rgb(0, 245, 255)
+                                    else Color.rgb(139, 92, 246)
+                                )
+                            }
                         }
                     focusedView.elevation =
                         dp(if (hasFocus) 6 else 1).toFloat()
                 }
             }
+
+            channelCardViews.getOrPut(entry.url) {
+                mutableListOf()
+            }.add(card)
 
             val numberLabel = TextView(this).apply {
                 text = (index + 1).toString().padStart(3, '0')
@@ -3294,6 +3310,66 @@ class MainActivity : Activity() {
             channelGrid.addView(card, params)
             }
         }
+
+        updateActiveChannelCardNeon()
+    }
+
+    private fun updateActiveChannelCardNeon() {
+        channelCardNeonAnimator?.cancel()
+        channelCardNeonAnimator = null
+
+        // Pulihkan bingkai semua channel sebelum menyalakan channel aktif.
+        channelCardViews.values.flatten().forEach { card ->
+            val focused = card.hasFocus()
+            (card.background as? android.graphics.drawable.GradientDrawable)
+                ?.setStroke(
+                    dp(if (focused) 3 else 1),
+                    if (focused) Color.rgb(0, 245, 255)
+                    else Color.rgb(139, 92, 246)
+                )
+        }
+
+        val url = activeChannelCardUrl
+        val cards = if (url == null) emptyList()
+            else channelCardViews[url].orEmpty()
+
+        cards.forEach { card ->
+            val focused = card.hasFocus()
+            (card.background as? android.graphics.drawable.GradientDrawable)
+                ?.setStroke(
+                    dp(if (focused) 3 else 1),
+                    if (focused) Color.rgb(0, 245, 255)
+                    else Color.rgb(139, 92, 246)
+                )
+        }
+
+        if (cards.isEmpty() || isFinishing || isDestroyed) return
+
+        val animator = ValueAnimator.ofInt(0, 359).apply {
+            duration = 2400L
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            addUpdateListener { animation ->
+                val hue = (animation.animatedValue as Int).toFloat()
+                val pulse = 0.5 + 0.5 * kotlin.math.sin(
+                    Math.toRadians(hue.toDouble() * 2.0)
+                )
+                val color = Color.HSVToColor(
+                    floatArrayOf(hue, 0.92f, (0.72 + 0.28 * pulse).toFloat())
+                )
+                val strokeWidth = dp((2.0 + pulse * 2.0).toInt().coerceIn(2, 4))
+
+                cards.forEach { card ->
+                    (card.background as? android.graphics.drawable.GradientDrawable)
+                        ?.setStroke(
+                            if (card.hasFocus()) dp(3) else strokeWidth,
+                            color
+                        )
+                }
+            }
+        }
+        channelCardNeonAnimator = animator
+        animator.start()
     }
 
     private fun addLabeledSpinner(
@@ -4866,6 +4942,8 @@ class MainActivity : Activity() {
         drmLicenseHeaders: Map<String, String> = emptyMap()
     ) {
         releasePlayer()
+        activeChannelCardUrl = url
+        updateActiveChannelCardNeon()
         activeQualityStreamUrl = url
         updateChannelQualityBadge(url, "—")
 
@@ -5300,6 +5378,9 @@ class MainActivity : Activity() {
             controlsHandler.removeCallbacks(it)
         }
         channelUrlBlinkRunnable = null
+        channelCardNeonAnimator?.cancel()
+        channelCardNeonAnimator = null
+        channelCardViews.clear()
         urlCheckExecutor.shutdownNow()
         releasePlayer()
         super.onDestroy()
