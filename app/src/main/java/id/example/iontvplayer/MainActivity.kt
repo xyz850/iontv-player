@@ -4029,8 +4029,8 @@ class MainActivity : Activity() {
                     (java.net.URL(url).openConnection()
                         as java.net.HttpURLConnection).apply {
                         instanceFollowRedirects = true
-                        connectTimeout = 15000
-                        readTimeout = 20000
+                        connectTimeout = 600000
+                        readTimeout = 600000
                         requestMethod = "GET"
                         setRequestProperty("Accept", "*/*")
                         headers.forEach { (name, value) ->
