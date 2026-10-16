@@ -71,25 +71,22 @@ class MainActivity : Activity() {
     private var loadedPlaylistUrl: String? = null
     private var selectedChannelCategory = "SEMUA"
     private val collapsedCountryGroups = mutableSetOf<String>()
+    private var countryFolderListVisible = false
     private var bottomCountryGroupsButton: android.widget.ImageButton? = null
 
     private fun updateCountryGroupsToggleButton() {
-        val groups = playlistChannels.map { countryGroupFor(it) }.distinct()
-        val allCollapsed = groups.isNotEmpty() &&
-            groups.all { it in collapsedCountryGroups }
-
         bottomCountryGroupsButton?.apply {
             setImageResource(
-                if (allCollapsed) {
-                    R.drawable.ic_group_arrow_down
-                } else {
+                if (countryFolderListVisible) {
                     R.drawable.ic_group_arrow_up
+                } else {
+                    R.drawable.ic_group_arrow_down
                 }
             )
-            contentDescription = if (allCollapsed) {
-                "Buka semua folder negara"
+            contentDescription = if (countryFolderListVisible) {
+                "Sembunyikan daftar folder negara"
             } else {
-                "Tutup semua folder negara"
+                "Tampilkan daftar folder negara"
             }
         }
     }
@@ -2278,19 +2275,7 @@ class MainActivity : Activity() {
             contentDescription = "Tutup semua folder negara"
 
             setOnClickListener {
-                val groups = playlistChannels
-                    .map { countryGroupFor(it) }
-                    .distinct()
-
-                val allCollapsed = groups.isNotEmpty() &&
-                    groups.all { it in collapsedCountryGroups }
-
-                if (allCollapsed) {
-                    collapsedCountryGroups.removeAll(groups.toSet())
-                } else {
-                    collapsedCountryGroups.addAll(groups)
-                }
-
+                countryFolderListVisible = !countryFolderListVisible
                 updateCountryGroupsToggleButton()
                 if (playlistChannels.isNotEmpty()) {
                     renderChannelGrid(playlistChannels)
@@ -2848,8 +2833,6 @@ class MainActivity : Activity() {
             .sortedBy { countryGroupOrder(it.first) }
 
         groupedChannels.forEach groupLoop@ { (country, countryChannels) ->
-            if (country in collapsedCountryGroups) return@groupLoop
-
             val groupHeader = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -2871,18 +2854,59 @@ class MainActivity : Activity() {
                 maxLines = 1
             }
 
+            val folderIcon = android.widget.ImageView(this).apply {
+                setImageResource(
+                    if (country in collapsedCountryGroups) {
+                        R.drawable.ic_country_folder_closed
+                    } else {
+                        R.drawable.ic_country_folder_open
+                    }
+                )
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                contentDescription = if (country in collapsedCountryGroups) {
+                    "Folder $country tertutup"
+                } else {
+                    "Folder $country terbuka"
+                }
+            }
+
+            groupHeader.addView(
+                folderIcon,
+                LinearLayout.LayoutParams(dp(26), dp(26)).apply {
+                    marginEnd = dp(8)
+                }
+            )
             groupHeader.addView(
                 groupTitleView,
                 LinearLayout.LayoutParams(0, dp(38), 1f)
             )
-            channelGrid.addView(
-                groupHeader,
-                GridLayout.LayoutParams().apply {
-                    width = cardWidth
-                    height = dp(42)
-                    setMargins(dp(3), dp(5), dp(3), dp(2))
+
+            groupHeader.isClickable = true
+            groupHeader.isFocusable = true
+            groupHeader.setOnClickListener {
+                if (country in collapsedCountryGroups) {
+                    val allGroups = playlistChannels
+                        .map { countryGroupFor(it) }
+                        .distinct()
+                    collapsedCountryGroups.clear()
+                    collapsedCountryGroups.addAll(allGroups)
+                    collapsedCountryGroups.remove(country)
+                    renderChannelGrid(playlistChannels)
                 }
-            )
+            }
+
+            if (countryFolderListVisible) {
+                channelGrid.addView(
+                    groupHeader,
+                    GridLayout.LayoutParams().apply {
+                        width = cardWidth
+                        height = dp(42)
+                        setMargins(dp(3), dp(5), dp(3), dp(2))
+                    }
+                )
+            }
+
+            if (country in collapsedCountryGroups) return@groupLoop
 
             countryChannels.forEach channelLoop@ { entry ->
             val index = playlistIndexByEntry[entry]
@@ -4272,9 +4296,17 @@ class MainActivity : Activity() {
                         playlistRequestHeaders = headers.toMap()
                         playlistChannels = channels
                         collapsedCountryGroups.clear()
-                        collapsedCountryGroups.addAll(
-                            channels.map { countryGroupFor(it) }.distinct()
-                        )
+                        val countryGroups = channels
+                            .map { countryGroupFor(it) }
+                            .distinct()
+                        collapsedCountryGroups.addAll(countryGroups)
+                        val initialCountry = countryGroups.firstOrNull {
+                            it == "INDONESIA"
+                        } ?: countryGroups.firstOrNull()
+                        if (initialCountry != null) {
+                            collapsedCountryGroups.remove(initialCountry)
+                        }
+                        countryFolderListVisible = false
                         renderChannelGrid(channels)
                         startEpgScheduleRefresh()
                         loadEpgSchedule()
