@@ -3107,7 +3107,7 @@ class MainActivity : Activity() {
                 "ENTERTAINMENT" in g || "LIFESTYLE" in g ||
                 "VISION+" in g -> "FILM & HIBURAN"
 
-            else -> "LAINNYA"
+            else -> "INDONESIA"
         }
     }
 
