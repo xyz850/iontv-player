@@ -5416,7 +5416,7 @@ class MainActivity : Activity() {
             }
         }
 
-        videoOptions = options.sortedBy { it.group.getTrackFormat(it.trackIndex).height }
+        videoOptions = options.sortedByDescending { it.group.getTrackFormat(it.trackIndex).height }
 
         val previousSelection = resolutionSpinner.selectedItem?.toString()
         updatingResolution = true
