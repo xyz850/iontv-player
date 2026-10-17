@@ -167,7 +167,9 @@ class MainActivity : Activity() {
         val headers: Map<String, String> = emptyMap(),
         val drmScheme: String? = null,
         val drmLicenseUrl: String? = null,
-        val drmLicenseHeaders: Map<String, String> = emptyMap()
+        val drmLicenseHeaders: Map<String, String> = emptyMap(),
+        val alternateUrls: List<String> = emptyList(),
+        val alternateHeaders: Map<String, Map<String, String>> = emptyMap()
     )
 
     private data class EpgProgramme(
@@ -4409,7 +4411,10 @@ class MainActivity : Activity() {
                 effectiveHeaders,
                 selected.drmScheme,
                 selected.drmLicenseUrl,
-                selected.drmLicenseHeaders
+                selected.drmLicenseHeaders,
+                selected.alternateUrls,
+                selected.alternateHeaders,
+                selected.url
             )
             return
         }
@@ -4750,13 +4755,18 @@ class MainActivity : Activity() {
         channels.add(
             PlaylistEntry(
                 name = testName,
-                url = "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash",
+                url = "https://beetv.my.id/xstreamx/vd.m3u8?ch=sctv",
                 groupTitle = "INDONESIA",
                 logoUrl = "https://www.mncvision.id/userfiles/image/channel/sctv.png",
-                headers = mapOf(
-                    "User-Agent" to "VidioPlayer/6.31.6",
-                    "Referer" to "http://www.vidio.com/",
-                    "Origin" to "http://www.vidio.com"
+                alternateUrls = listOf(
+                    "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash"
+                ),
+                alternateHeaders = mapOf(
+                    "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash" to mapOf(
+                        "User-Agent" to "VidioPlayer/6.31.6",
+                        "Referer" to "http://www.vidio.com/",
+                        "Origin" to "http://www.vidio.com"
+                    )
                 )
             )
         )
@@ -5117,10 +5127,13 @@ class MainActivity : Activity() {
         headers: Map<String, String>,
         drmScheme: String? = null,
         drmLicenseUrl: String? = null,
-        drmLicenseHeaders: Map<String, String> = emptyMap()
+        drmLicenseHeaders: Map<String, String> = emptyMap(),
+        alternateUrls: List<String> = emptyList(),
+        alternateHeaders: Map<String, Map<String, String>> = emptyMap(),
+        channelCardUrl: String = url
     ) {
         releasePlayer()
-        activeChannelCardUrl = url
+        activeChannelCardUrl = channelCardUrl
         updateActiveChannelCardNeon()
         activeQualityStreamUrl = url
         updateChannelQualityBadge(url, "—")
@@ -5372,6 +5385,26 @@ class MainActivity : Activity() {
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
+                            if (alternateUrls.isNotEmpty()) {
+                                val nextUrl = alternateUrls.first()
+                                android.util.Log.w(
+                                    "IONTVPlayer",
+                                    "URL utama gagal; mencoba URL alternatif: $nextUrl"
+                                )
+                                status.text = "URL utama gagal, mencoba sumber alternatif…"
+                                playMedia(
+                                    nextUrl,
+                                    alternateHeaders[nextUrl] ?: headers,
+                                    drmScheme,
+                                    drmLicenseUrl,
+                                    drmLicenseHeaders,
+                                    alternateUrls.drop(1),
+                                    alternateHeaders,
+                                    channelCardUrl
+                                )
+                                return
+                            }
+
                             videoFrameRendered = false
                             hideVideoLoading()
                             var causeForUrlStatus: Throwable? = error
