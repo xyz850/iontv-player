@@ -119,12 +119,12 @@ class MainActivity : Activity() {
 
     private var playlistRequestHeaders: Map<String, String> = emptyMap()
 
-    // Sinkronisasi berkala khusus SCTV, INDOSIAR, dan ANTV.
+    // Sinkronisasi berkala seluruh channel dari playlist tetap.
     private val targetPlaylistSyncHandler = Handler(Looper.getMainLooper())
     private var targetPlaylistSyncRunnable: Runnable? = null
     private var targetPlaylistSyncInProgress = false
     private var targetPlaylistSyncStopped = false
-    private val targetPlaylistSyncIntervalMs = 30 * 60 * 1000L
+    private val targetPlaylistSyncIntervalMs = 60 * 1000L
 
     private var urlScanInProgress = false
     private var urlMonitorRunnable: Runnable? = null
@@ -4491,9 +4491,6 @@ class MainActivity : Activity() {
     ) {
         status.text = ""
 
-        // Ambil daftar lama sebelum thread request dimulai.
-        val previousChannelsSnapshot = playlistChannels.toList()
-
         Thread {
             var connection: java.net.HttpURLConnection? = null
             try {
@@ -4529,47 +4526,8 @@ class MainActivity : Activity() {
                             name.equals("TES", ignoreCase = true)
                     }
 
-                // Playlist pertama memakai semua data terbaru.
-                // Refresh berikutnya hanya memperbarui SCTV,
-                // INDOSIAR, dan ANTV berdasarkan nama.
-                // Channel lain tetap memakai entri sebelumnya.
-                val previousChannels = previousChannelsSnapshot
-                val targetPattern = Regex(
-                    "^(SCTV|INDOSIAR|ANTV)\\b",
-                    RegexOption.IGNORE_CASE
-                )
-                fun channelKey(entry: PlaylistEntry): String =
-                    entry.name.trim()
-                        .replace(Regex("\\s+"), " ")
-                        .uppercase(java.util.Locale.ROOT)
-
-                val channels = if (previousChannels.isEmpty()) {
-                    parsedChannels
-                } else {
-                    // Satu entri baru hanya dipakai sekali agar duplikat aman.
-                    val usedFreshIndices = mutableSetOf<Int>()
-                    previousChannels.map { previous ->
-                        if (!targetPattern.containsMatchIn(previous.name.trim())) {
-                            previous
-                        } else {
-                            val freshIndex = parsedChannels.indices.firstOrNull { index ->
-                                index !in usedFreshIndices &&
-                                    targetPattern.containsMatchIn(
-                                        parsedChannels[index].name.trim()
-                                    ) &&
-                                    channelKey(parsedChannels[index]) ==
-                                        channelKey(previous)
-                            }
-
-                            if (freshIndex == null) {
-                                previous
-                            } else {
-                                usedFreshIndices.add(freshIndex)
-                                parsedChannels[freshIndex]
-                            }
-                        }
-                    }
-                }
+                // Setiap pemuatan playlist memakai seluruh data terbaru dari URL.
+                val channels = parsedChannels
 
                 runOnUiThread {
                     dismissSplash()
@@ -4706,6 +4664,10 @@ class MainActivity : Activity() {
                     .bufferedReader(Charsets.UTF_8)
                     .use { it.readText() }
 
+                if (!text.contains("#EXTM3U", ignoreCase = true)) {
+                    throw IllegalStateException("Respons bukan playlist M3U yang valid")
+                }
+
                 val freshEntries = parsePlaylist(
                     text,
                     connection.url.toString()
@@ -4717,6 +4679,10 @@ class MainActivity : Activity() {
                         name.equals("TES", true)
                 }
 
+                if (freshEntries.isEmpty()) {
+                    throw IllegalStateException("Playlist tidak berisi channel valid")
+                }
+
                 runOnUiThread {
                     targetPlaylistSyncInProgress = false
 
@@ -4724,17 +4690,6 @@ class MainActivity : Activity() {
                         loadedPlaylistUrl != fixedPlaylistUrl ||
                         playlistChannels.isEmpty()
                     ) return@runOnUiThread
-
-                    fun isTarget(entry: PlaylistEntry): Boolean =
-                        Regex(
-                            "^(SCTV|INDOSIAR|ANTV)\\s+[12]$",
-                            RegexOption.IGNORE_CASE
-                        ).matches(entry.name.trim())
-
-                    fun key(entry: PlaylistEntry): String =
-                        entry.name.trim()
-                            .replace(Regex("\\s+"), " ")
-                            .uppercase(java.util.Locale.ROOT)
 
                     val oldChannels = playlistChannels
                     val activeBefore = oldChannels.firstOrNull {
@@ -4744,62 +4699,34 @@ class MainActivity : Activity() {
                         channelSpinner.selectedItemPosition
                     )?.name
 
-                    // Hanya enam entri target yang boleh berubah.
-                    val updatedChannels = oldChannels.map { old ->
-                        if (!isTarget(old)) {
-                            old
-                        } else {
-                            freshEntries.firstOrNull {
-                                isTarget(it) && key(it) == key(old)
-                            } ?: old
-                        }
+                    // Ganti seluruh daftar hanya setelah playlist baru valid.
+                    // Pemutar yang sedang berjalan tidak dimulai ulang di sini.
+                    if (freshEntries == oldChannels) {
+                        status.text =
+                            "Sinkronisasi selesai: ${freshEntries.size} channel diperiksa."
+                        return@runOnUiThread
                     }
 
-                    if (updatedChannels == oldChannels) return@runOnUiThread
-
-                    playlistChannels = updatedChannels
-                    renderChannelGrid(updatedChannels)
+                    playlistChannels = freshEntries
+                    renderChannelGrid(freshEntries)
 
                     channelSpinner.adapter = ArrayAdapter(
                         this,
                         android.R.layout.simple_spinner_dropdown_item,
-                        updatedChannels.map { it.name }
+                        freshEntries.map { it.name }
                     )
 
                     val restoreName = activeBefore?.name ?: selectedName
-                    val restoreIndex = updatedChannels.indexOfFirst {
-                        it.name == restoreName
+                    val restoreIndex = freshEntries.indexOfFirst {
+                        it.name.equals(restoreName, ignoreCase = true)
                     }.takeIf { it >= 0 } ?: 0
                     channelSpinner.setSelection(restoreIndex)
 
-                    // Jika URL channel target yang sedang diputar berubah,
-                    // mulai ulang hanya channel tersebut.
-                    val activeAfter = activeBefore?.let { old ->
-                        updatedChannels.firstOrNull {
-                            key(it) == key(old)
-                        }
-                    }
-
-                    if (activeBefore != null &&
-                        isTarget(activeBefore) &&
-                        activeAfter != null &&
-                        activeAfter.url != activeBefore.url
-                    ) {
-                        val effectiveHeaders = headers.toMutableMap()
-                        effectiveHeaders.putAll(activeAfter.headers)
-
-                        playMedia(
-                            activeAfter.url,
-                            effectiveHeaders,
-                            activeAfter.drmScheme,
-                            activeAfter.drmLicenseUrl,
-                            activeAfter.drmLicenseHeaders
-                        )
-                        status.text =
-                            "URL ${activeAfter.name} diperbarui otomatis."
-                    }
+                    status.text =
+                        "Sinkronisasi otomatis selesai: ${freshEntries.size} channel."
                 }
             } catch (_: Exception) {
+                // Pertahankan daftar terakhir yang valid jika jaringan gagal.
                 runOnUiThread {
                     targetPlaylistSyncInProgress = false
                 }
