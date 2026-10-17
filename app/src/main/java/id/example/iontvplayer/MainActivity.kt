@@ -2954,6 +2954,7 @@ class MainActivity : Activity() {
             "J2 LEAGUE",
             "J3 LEAGUE",
             "CHINESE SUPER LEAGUE",
+            "[SUPER LEAGUE]",
             "CHN LEAGUE",
             "CHINESE U-20 LEAGUE",
             "GUANGXI FOOTBALL",
@@ -3050,9 +3051,9 @@ class MainActivity : Activity() {
         )
 
         val hasMatchSeparator =
-            name.contains(" VS ") ||
-            name.contains(" VS. ") ||
-            name.contains(" - ")
+            Regex("""\bVS?\.?\b""").containsMatchIn(name) ||
+            name.contains(" - ") ||
+            name.contains(" @ ")
 
         return hasMatchSeparator &&
             footballLabels.any { it in combined }
