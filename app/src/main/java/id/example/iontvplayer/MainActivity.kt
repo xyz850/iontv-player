@@ -4483,6 +4483,9 @@ class MainActivity : Activity() {
     ) {
         status.text = ""
 
+        // Ambil daftar lama sebelum thread request dimulai.
+        val previousChannelsSnapshot = playlistChannels.toList()
+
         Thread {
             var connection: java.net.HttpURLConnection? = null
             try {
@@ -4509,7 +4512,7 @@ class MainActivity : Activity() {
                     .use { it.readText() }
 
                 val finalUrl = connection.url.toString()
-                val channels = parsePlaylist(text, finalUrl)
+                val parsedChannels = parsePlaylist(text, finalUrl)
                     .filterNot {
                         val name = it.name.trim()
                         name.equals("001 TRAKTIR KOPI", ignoreCase = true) ||
@@ -4517,6 +4520,48 @@ class MainActivity : Activity() {
                             name.equals("TRAKTIR KOPI", ignoreCase = true) ||
                             name.equals("TES", ignoreCase = true)
                     }
+
+                // Playlist pertama memakai semua data terbaru.
+                // Refresh berikutnya hanya memperbarui SCTV,
+                // INDOSIAR, dan ANTV berdasarkan nama.
+                // Channel lain tetap memakai entri sebelumnya.
+                val previousChannels = previousChannelsSnapshot
+                val targetPattern = Regex(
+                    "^(SCTV|INDOSIAR|ANTV)\\b",
+                    RegexOption.IGNORE_CASE
+                )
+                fun channelKey(entry: PlaylistEntry): String =
+                    entry.name.trim()
+                        .replace(Regex("\\s+"), " ")
+                        .uppercase(java.util.Locale.ROOT)
+
+                val channels = if (previousChannels.isEmpty()) {
+                    parsedChannels
+                } else {
+                    // Satu entri baru hanya dipakai sekali agar duplikat aman.
+                    val usedFreshIndices = mutableSetOf<Int>()
+                    previousChannels.map { previous ->
+                        if (!targetPattern.containsMatchIn(previous.name.trim())) {
+                            previous
+                        } else {
+                            val freshIndex = parsedChannels.indices.firstOrNull { index ->
+                                index !in usedFreshIndices &&
+                                    targetPattern.containsMatchIn(
+                                        parsedChannels[index].name.trim()
+                                    ) &&
+                                    channelKey(parsedChannels[index]) ==
+                                        channelKey(previous)
+                            }
+
+                            if (freshIndex == null) {
+                                previous
+                            } else {
+                                usedFreshIndices.add(freshIndex)
+                                parsedChannels[freshIndex]
+                            }
+                        }
+                    }
+                }
 
                 runOnUiThread {
                     dismissSplash()
