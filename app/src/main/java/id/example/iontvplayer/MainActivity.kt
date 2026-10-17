@@ -4526,8 +4526,8 @@ class MainActivity : Activity() {
                             name.equals("TES", ignoreCase = true)
                     }
 
-                // Setiap pemuatan playlist memakai seluruh data terbaru dari URL.
-                val channels = parsedChannels
+                // Tambahkan channel uji tanpa metadata DRM; channel asli tetap dipertahankan.
+                val channels = withSctvTestChannel(parsedChannels)
 
                 runOnUiThread {
                     dismissSplash()
@@ -4668,16 +4668,18 @@ class MainActivity : Activity() {
                     throw IllegalStateException("Respons bukan playlist M3U yang valid")
                 }
 
-                val freshEntries = parsePlaylist(
-                    text,
-                    connection.url.toString()
-                ).filterNot {
-                    val name = it.name.trim()
-                    name.equals("001 TRAKTIR KOPI", true) ||
-                        name.equals("01 TRAKTIR KOPI", true) ||
-                        name.equals("TRAKTIR KOPI", true) ||
-                        name.equals("TES", true)
-                }
+                val freshEntries = withSctvTestChannel(
+                    parsePlaylist(
+                        text,
+                        connection.url.toString()
+                    ).filterNot {
+                        val name = it.name.trim()
+                        name.equals("001 TRAKTIR KOPI", true) ||
+                            name.equals("01 TRAKTIR KOPI", true) ||
+                            name.equals("TRAKTIR KOPI", true) ||
+                            name.equals("TES", true)
+                    }
+                )
 
                 if (freshEntries.isEmpty()) {
                     throw IllegalStateException("Playlist tidak berisi channel valid")
@@ -4734,6 +4736,32 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
         }.start()
+    }
+
+    // Channel sementara untuk menguji SCTV 2 tanpa metadata Widevine.
+    private fun withSctvTestChannel(
+        entries: List<PlaylistEntry>
+    ): List<PlaylistEntry> {
+        val testName = "SCTV 2 - TES"
+        val channels = entries.filterNot {
+            it.name.equals(testName, ignoreCase = true)
+        }.toMutableList()
+
+        channels.add(
+            PlaylistEntry(
+                name = testName,
+                url = "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash",
+                groupTitle = "INDONESIA",
+                logoUrl = "https://www.mncvision.id/userfiles/image/channel/sctv.png",
+                headers = mapOf(
+                    "User-Agent" to "VidioPlayer/6.31.6",
+                    "Referer" to "http://www.vidio.com/",
+                    "Origin" to "http://www.vidio.com"
+                )
+            )
+        )
+
+        return channels
     }
 
     private fun parsePlaylist(
