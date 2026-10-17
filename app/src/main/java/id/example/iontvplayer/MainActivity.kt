@@ -118,6 +118,14 @@ class MainActivity : Activity() {
     private var channelUrlBlinkVisible = true
 
     private var playlistRequestHeaders: Map<String, String> = emptyMap()
+
+    // Sinkronisasi berkala khusus SCTV, INDOSIAR, dan ANTV.
+    private val targetPlaylistSyncHandler = Handler(Looper.getMainLooper())
+    private var targetPlaylistSyncRunnable: Runnable? = null
+    private var targetPlaylistSyncInProgress = false
+    private var targetPlaylistSyncStopped = false
+    private val targetPlaylistSyncIntervalMs = 30 * 60 * 1000L
+
     private var urlScanInProgress = false
     private var urlMonitorRunnable: Runnable? = null
 
@@ -4604,6 +4612,7 @@ class MainActivity : Activity() {
                         status.text =
                             "Playlist dimuat: ${channels.size} channel."
                         startUrlMonitoring()
+                        startTargetPlaylistAutoSync()
 
                         if (autoPlayFirst) {
                             channelSpinner.post {
@@ -4624,6 +4633,175 @@ class MainActivity : Activity() {
                     swipeRefreshLayout.isRefreshing = false
                     status.text =
                         "Gagal membaca playlist: ${e.message ?: "koneksi atau format tidak valid"}"
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
+    }
+
+    private fun startTargetPlaylistAutoSync() {
+        if (targetPlaylistSyncStopped || isFinishing || isDestroyed) return
+
+        targetPlaylistSyncRunnable?.let {
+            targetPlaylistSyncHandler.removeCallbacks(it)
+        }
+
+        val task = object : Runnable {
+            override fun run() {
+                if (targetPlaylistSyncStopped || isFinishing || isDestroyed) {
+                    return
+                }
+
+                syncTargetChannelsFromFixedPlaylist()
+
+                if (!targetPlaylistSyncStopped && !isFinishing && !isDestroyed) {
+                    targetPlaylistSyncHandler.postDelayed(
+                        this,
+                        targetPlaylistSyncIntervalMs
+                    )
+                }
+            }
+        }
+
+        targetPlaylistSyncRunnable = task
+        targetPlaylistSyncHandler.postDelayed(
+            task,
+            targetPlaylistSyncIntervalMs
+        )
+    }
+
+    private fun syncTargetChannelsFromFixedPlaylist() {
+        if (targetPlaylistSyncInProgress ||
+            loadedPlaylistUrl != fixedPlaylistUrl ||
+            playlistChannels.isEmpty() ||
+            isFinishing || isDestroyed
+        ) return
+
+        targetPlaylistSyncInProgress = true
+        val headers = playlistRequestHeaders.toMap()
+
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                connection =
+                    (java.net.URL(fixedPlaylistUrl).openConnection()
+                        as java.net.HttpURLConnection).apply {
+                        instanceFollowRedirects = true
+                        connectTimeout = 10_000
+                        readTimeout = 15_000
+                        requestMethod = "GET"
+                        setRequestProperty("Accept", "*/*")
+                        headers.forEach { (name, value) ->
+                            setRequestProperty(name, value)
+                        }
+                    }
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("HTTP $code")
+                }
+
+                val text = connection.inputStream
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+
+                val freshEntries = parsePlaylist(
+                    text,
+                    connection.url.toString()
+                ).filterNot {
+                    val name = it.name.trim()
+                    name.equals("001 TRAKTIR KOPI", true) ||
+                        name.equals("01 TRAKTIR KOPI", true) ||
+                        name.equals("TRAKTIR KOPI", true) ||
+                        name.equals("TES", true)
+                }
+
+                runOnUiThread {
+                    targetPlaylistSyncInProgress = false
+
+                    if (isFinishing || isDestroyed ||
+                        loadedPlaylistUrl != fixedPlaylistUrl ||
+                        playlistChannels.isEmpty()
+                    ) return@runOnUiThread
+
+                    fun isTarget(entry: PlaylistEntry): Boolean =
+                        Regex(
+                            "^(SCTV|INDOSIAR|ANTV)\\s+[12]$",
+                            RegexOption.IGNORE_CASE
+                        ).matches(entry.name.trim())
+
+                    fun key(entry: PlaylistEntry): String =
+                        entry.name.trim()
+                            .replace(Regex("\\s+"), " ")
+                            .uppercase(java.util.Locale.ROOT)
+
+                    val oldChannels = playlistChannels
+                    val activeBefore = oldChannels.firstOrNull {
+                        it.url == activeChannelCardUrl
+                    }
+                    val selectedName = oldChannels.getOrNull(
+                        channelSpinner.selectedItemPosition
+                    )?.name
+
+                    // Hanya enam entri target yang boleh berubah.
+                    val updatedChannels = oldChannels.map { old ->
+                        if (!isTarget(old)) {
+                            old
+                        } else {
+                            freshEntries.firstOrNull {
+                                isTarget(it) && key(it) == key(old)
+                            } ?: old
+                        }
+                    }
+
+                    if (updatedChannels == oldChannels) return@runOnUiThread
+
+                    playlistChannels = updatedChannels
+                    renderChannelGrid(updatedChannels)
+
+                    channelSpinner.adapter = ArrayAdapter(
+                        this,
+                        android.R.layout.simple_spinner_dropdown_item,
+                        updatedChannels.map { it.name }
+                    )
+
+                    val restoreName = activeBefore?.name ?: selectedName
+                    val restoreIndex = updatedChannels.indexOfFirst {
+                        it.name == restoreName
+                    }.takeIf { it >= 0 } ?: 0
+                    channelSpinner.setSelection(restoreIndex)
+
+                    // Jika URL channel target yang sedang diputar berubah,
+                    // mulai ulang hanya channel tersebut.
+                    val activeAfter = activeBefore?.let { old ->
+                        updatedChannels.firstOrNull {
+                            key(it) == key(old)
+                        }
+                    }
+
+                    if (activeBefore != null &&
+                        isTarget(activeBefore) &&
+                        activeAfter != null &&
+                        activeAfter.url != activeBefore.url
+                    ) {
+                        val effectiveHeaders = headers.toMutableMap()
+                        effectiveHeaders.putAll(activeAfter.headers)
+
+                        playMedia(
+                            activeAfter.url,
+                            effectiveHeaders,
+                            activeAfter.drmScheme,
+                            activeAfter.drmLicenseUrl,
+                            activeAfter.drmLicenseHeaders
+                        )
+                        status.text =
+                            "URL ${activeAfter.name} diperbarui otomatis."
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    targetPlaylistSyncInProgress = false
                 }
             } finally {
                 connection?.disconnect()
@@ -5403,6 +5581,12 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        targetPlaylistSyncStopped = true
+        targetPlaylistSyncRunnable?.let {
+            targetPlaylistSyncHandler.removeCallbacks(it)
+        }
+        targetPlaylistSyncRunnable = null
+
         splashTimeoutRunnable?.let {
             window.decorView.removeCallbacks(it)
         }
