@@ -4743,31 +4743,63 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    // Channel sementara untuk menguji SCTV 2 tanpa metadata Widevine.
+    // Channel alternatif untuk pengujian sumber tanpa metadata DRM.
     private fun withSctvTestChannel(
         entries: List<PlaylistEntry>
     ): List<PlaylistEntry> {
-        val testName = "SCTV 2 - TES"
-        val channels = entries.filterNot {
-            it.name.equals(testName, ignoreCase = true)
+        val sctvUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash"
+        val beetvUrl = "https://beetv.my.id/xstreamx/vd.m3u8?ch=sctv"
+        val indosiarUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=205&type=dash"
+        val antvUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=782&type=dash"
+
+        val vidioHeaders = mapOf(
+            "User-Agent" to "VidioPlayer/6.31.6",
+            "Referer" to "http://www.vidio.com/",
+            "Origin" to "http://www.vidio.com"
+        )
+
+        val alternativeNames = setOf(
+            "SCTV 2 - TES",
+            "SCTV ALTERNATIF",
+            "INDOSIAR ALTERNATIF",
+            "ANTV ALTERNATIF"
+        )
+
+        val channels = entries.filterNot { entry ->
+            alternativeNames.any { name ->
+                entry.name.equals(name, ignoreCase = true)
+            }
         }.toMutableList()
 
         channels.add(
             PlaylistEntry(
-                name = testName,
-                url = "https://beetv.my.id/xstreamx/vd.m3u8?ch=sctv",
+                name = "SCTV ALTERNATIF",
+                url = sctvUrl,
                 groupTitle = "INDONESIA",
                 logoUrl = "https://www.mncvision.id/userfiles/image/channel/sctv.png",
-                alternateUrls = listOf(
-                    "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash"
-                ),
-                alternateHeaders = mapOf(
-                    "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash" to mapOf(
-                        "User-Agent" to "VidioPlayer/6.31.6",
-                        "Referer" to "http://www.vidio.com/",
-                        "Origin" to "http://www.vidio.com"
-                    )
-                )
+                headers = vidioHeaders,
+                alternateUrls = listOf(beetvUrl),
+                alternateHeaders = mapOf(beetvUrl to emptyMap())
+            )
+        )
+
+        channels.add(
+            PlaylistEntry(
+                name = "INDOSIAR ALTERNATIF",
+                url = indosiarUrl,
+                groupTitle = "INDONESIA",
+                logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/INDOSIAR_Logo.png/1280px-INDOSIAR_Logo.png",
+                headers = vidioHeaders
+            )
+        )
+
+        channels.add(
+            PlaylistEntry(
+                name = "ANTV ALTERNATIF",
+                url = antvUrl,
+                groupTitle = "INDONESIA",
+                logoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRt-8ZOCCFoPNA9ms_SLoPbTfiivrl_7xyCxg&s",
+                headers = vidioHeaders
             )
         )
 
