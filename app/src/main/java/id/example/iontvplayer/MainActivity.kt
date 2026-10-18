@@ -2594,14 +2594,47 @@ class MainActivity : Activity() {
             gearButton
         )
 
-        // Tombol website Cyber Neon TV di tengah bagian paling bawah layar.
+        // Tombol Telegram di pojok kiri bawah.
+        val cyberTelegramButton = android.widget.TextView(this).apply {
+            text = "💬  TELEGRAM"
+            textSize = 12f
+            letterSpacing = 0.04f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(0, 245, 255))
+            setPadding(dp(12), dp(4), dp(12), dp(4))
+            isClickable = true
+            isFocusable = false
+            setBackgroundColor(Color.TRANSPARENT)
+            backgroundTintList = null
+            stateListAnimator = null
+            elevation = 0f
+            contentDescription = "Buka grup Telegram Cyber Neon TV"
+            setOnClickListener {
+                try {
+                    startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://t.me/+P-teIggm2No0OGJl")
+                        )
+                    )
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        "Telegram tidak dapat dibuka",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+
+        // Tombol website di pojok kanan bawah.
         val cyberWebsiteButton = android.widget.TextView(this).apply {
             text = "🌐  WEBSITE"
             textSize = 12f
-            letterSpacing = 0.08f
+            letterSpacing = 0.04f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(0, 245, 255))
-            setPadding(dp(18), dp(4), dp(18), dp(4))
+            setPadding(dp(12), dp(4), dp(12), dp(4))
             isClickable = true
             isFocusable = false
             setBackgroundColor(Color.TRANSPARENT)
@@ -2629,13 +2662,39 @@ class MainActivity : Activity() {
             }
         }
 
+        // Kedua tombol berada di satu baris paling bawah: Telegram kiri, Website kanan.
+        val cyberBottomButtons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), 0, dp(8), 0)
+            addView(
+                cyberTelegramButton,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(36),
+                    1f
+                ).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+            )
+            addView(
+                cyberWebsiteButton,
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(36),
+                    1f
+                ).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+            )
+        }
+
         root.addView(
-            cyberWebsiteButton,
+            cyberBottomButtons,
             LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(36)
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(40)
             ).apply {
-                gravity = Gravity.CENTER_HORIZONTAL
                 topMargin = dp(5)
                 bottomMargin = dp(4)
             }
