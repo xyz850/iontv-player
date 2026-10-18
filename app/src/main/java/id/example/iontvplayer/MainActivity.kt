@@ -86,6 +86,7 @@ class MainActivity : Activity() {
     private var brightnessPopup: FrameLayout? = null
     private var videoOverlayControls: List<View> = emptyList()
     private val pipSavedVisibility = linkedMapOf<View, Int>()
+    private val pipSavedPadding = linkedMapOf<ViewGroup, IntArray>()
     private var pipOriginalVideoLayoutParams: ViewGroup.LayoutParams? = null
 
     private lateinit var channelSpinner: Spinner
@@ -4077,8 +4078,17 @@ class MainActivity : Activity() {
         ) return false
 
         pipSavedVisibility.clear()
+        pipSavedPadding.clear()
 
         fun hideNonVideoViews(group: ViewGroup) {
+            pipSavedPadding[group] = intArrayOf(
+                group.paddingLeft,
+                group.paddingTop,
+                group.paddingRight,
+                group.paddingBottom
+            )
+            group.setPadding(0, 0, 0, 0)
+
             for (i in 0 until group.childCount) {
                 val child = group.getChildAt(i)
 
@@ -4135,6 +4145,13 @@ class MainActivity : Activity() {
             view.visibility = visibility
         }
         pipSavedVisibility.clear()
+
+        pipSavedPadding.forEach { (group, padding) ->
+            group.setPadding(
+                padding[0], padding[1], padding[2], padding[3]
+            )
+        }
+        pipSavedPadding.clear()
 
         if (::videoContainer.isInitialized) videoContainer.requestLayout()
         if (::root.isInitialized) {
