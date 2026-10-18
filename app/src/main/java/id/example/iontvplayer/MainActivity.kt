@@ -6169,6 +6169,64 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Navigasi D-pad khusus untuk daftar channel TV.
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            val direction = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> -1
+                KeyEvent.KEYCODE_DPAD_LEFT -> -1
+                KeyEvent.KEYCODE_DPAD_DOWN -> 1
+                KeyEvent.KEYCODE_DPAD_RIGHT -> 1
+                else -> 0
+            }
+
+            if (direction != 0) {
+                val cards = channelCardViews.values
+                    .flatten()
+                    .distinct()
+                    .filter { it.isShown && it.isFocusable }
+
+                if (cards.isNotEmpty()) {
+                    var node: View? = currentFocus
+                    var focusedCard: LinearLayout? = null
+                    var focusInVideo = false
+
+                    while (node != null) {
+                        val matchingCard = cards.firstOrNull { it === node }
+                        if (matchingCard != null) {
+                            focusedCard = matchingCard
+                            break
+                        }
+
+                        if (node === videoContainer || node === playerView) {
+                            focusInVideo = true
+                        }
+
+                        node = node.parent as? View
+                    }
+
+                    if (focusedCard != null) {
+                        val currentIndex = cards.indexOf(focusedCard)
+                        val targetIndex =
+                            (currentIndex + direction).coerceIn(0, cards.lastIndex)
+
+                        // Jangan biarkan fokus keluar dari daftar di ujung.
+                        cards[targetIndex].requestFocus()
+                        return true
+                    }
+
+                    // Dari area video, arahkan fokus ke daftar channel.
+                    if (focusInVideo || currentFocus == null) {
+                        val target = if (direction > 0) {
+                            cards.first()
+                        } else {
+                            cards.last()
+                        }
+                        target.requestFocus()
+                        return true
+                    }
+                }
+            }
+        }
         val isOkKey =
             event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
             event.keyCode == KeyEvent.KEYCODE_ENTER ||
