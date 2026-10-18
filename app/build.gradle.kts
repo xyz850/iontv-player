@@ -13,7 +13,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "id.example.cyberneontv"
+        applicationId = "id.cyberneon.tv"
         minSdk = 23
         targetSdk = 35
         versionCode = 6
