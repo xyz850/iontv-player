@@ -2131,6 +2131,116 @@ class MainActivity : Activity() {
             }
         }
 
+        // Papan pengumuman remote Cyber Neon TV.
+        val remoteGuidePanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(9), dp(7), dp(9), dp(7))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.rgb(8, 19, 34))
+                setStroke(dp(1), Color.rgb(0, 210, 235))
+                cornerRadius = dp(10).toFloat()
+            }
+        }
+
+        val guideTitle = TextView(this).apply {
+            text = "PANDUAN REMOTE"
+            textSize = 14f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(0, 245, 255))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, dp(4))
+        }
+        remoteGuidePanel.addView(guideTitle)
+
+        fun addRemoteGuideRow(
+            number: String,
+            heading: String,
+            detail: String,
+            showOk: Boolean = false
+        ) {
+            val row = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(2), 0, dp(2))
+            }
+
+            val numberBadge = TextView(this@MainActivity).apply {
+                text = number
+                textSize = 13f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(Color.rgb(3, 15, 26))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.rgb(0, 225, 245))
+                    cornerRadius = dp(6).toFloat()
+                }
+            }
+            row.addView(
+                numberBadge,
+                LinearLayout.LayoutParams(dp(25), dp(25)).apply {
+                    marginEnd = dp(7)
+                }
+            )
+
+            val words = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            val headingRow = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
+            headingRow.addView(
+                TextView(this@MainActivity).apply {
+                    text = heading
+                    textSize = 11f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setTextColor(Color.WHITE)
+                },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            )
+
+            if (showOk) {
+                headingRow.addView(
+                    TextView(this@MainActivity).apply {
+                        text = " OK "
+                        textSize = 12f
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        gravity = Gravity.CENTER
+                        setTextColor(Color.rgb(0, 245, 255))
+                        setPadding(dp(8), dp(1), dp(8), dp(1))
+                        background = android.graphics.drawable.GradientDrawable().apply {
+                            setColor(Color.rgb(5, 34, 48))
+                            setStroke(dp(2), Color.rgb(0, 245, 255))
+                            cornerRadius = dp(18).toFloat()
+                        }
+                        setShadowLayer(dp(4).toFloat(), 0f, 0f,
+                            Color.rgb(0, 180, 220))
+                        contentDescription = "Tombol OK seperti pada remote"
+                    }
+                )
+            }
+
+            words.addView(headingRow)
+            words.addView(
+                TextView(this@MainActivity).apply {
+                    text = detail
+                    textSize = 10f
+                    setTextColor(Color.rgb(190, 210, 224))
+                }
+            )
+            row.addView(
+                words,
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            )
+            remoteGuidePanel.addView(row)
+        }
+
+        addRemoteGuideRow("1", "CARI CHANNEL", "Gunakan tombol arah ▲ ▼ ◀ ▶.")
+        addRemoteGuideRow("2", "MULAI MENONTON", "Pilih channel dengan tombol OK.", true)
+        addRemoteGuideRow("3", "LAYAR PENUH", "Saat fokus di video, OK lagi untuk keluar.")
+        addRemoteGuideRow("4", "KEMBALI", "Tekan BACK untuk kembali.")
+
         if (landscapeLayout) {
             // Daftar channel tetap di sisi kiri.
             val channelSide = LinearLayout(this).apply {
@@ -2143,6 +2253,17 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
             )
+            channelSide.addView(
+                remoteGuidePanel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(4)
+                    bottomMargin = dp(4)
+                }
+            )
+
             channelSide.addView(
                 channelCategoryRow,
                 LinearLayout.LayoutParams(
@@ -2196,6 +2317,16 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
+            )
+            mainContent.addView(
+                remoteGuidePanel,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(4)
+                    bottomMargin = dp(4)
+                }
             )
             mainContent.addView(
                 channelCategoryRow,
