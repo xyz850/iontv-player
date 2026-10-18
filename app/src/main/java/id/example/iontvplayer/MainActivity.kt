@@ -69,6 +69,7 @@ class MainActivity : Activity() {
 
     private lateinit var channelSpinner: Spinner
     private lateinit var channelGrid: GridLayout
+    private val visibleChannelPlaylistIndexes = mutableListOf<Int>()
     private var playlistChannels: List<PlaylistEntry> = emptyList()
     private var loadedPlaylistUrl: String? = null
     private var selectedChannelCategory = "SEMUA"
@@ -2259,6 +2260,11 @@ class MainActivity : Activity() {
         addRemoteGuideRow("2", "MULAI MENONTON", "Pilih channel dengan tombol OK.", true)
         addRemoteGuideRow("3", "LAYAR PENUH", "Saat fokus di video, OK lagi untuk keluar.")
         addRemoteGuideRow("4", "KEMBALI", "Tekan BACK untuk kembali.")
+        addRemoteGuideRow(
+            "5",
+            "TOMBOL ANGKA 1–9",
+            "Tekan angka 1–9 untuk memutar kartu channel sesuai urutan yang terlihat."
+        )
 
         // Catatan ini harus diperbarui setiap kali APK baru resmi dirilis.
         remoteGuidePanel.addView(
@@ -3436,6 +3442,7 @@ class MainActivity : Activity() {
         channelCardNeonAnimator?.cancel()
         channelCardNeonAnimator = null
         channelCardViews.clear()
+        visibleChannelPlaylistIndexes.clear()
         channelGrid.removeAllViews()
         epgScheduleViews.clear()
         channelUrlStatusViews.clear()
@@ -3541,6 +3548,8 @@ class MainActivity : Activity() {
                 ?: playlistChannels.indexOfFirst { it.url == entry.url }
 
             if (index < 0) return@channelLoop
+            visibleChannelPlaylistIndexes.add(index)
+
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -6084,6 +6093,36 @@ class MainActivity : Activity() {
             if (focused === videoContainer || focused === playerView) {
                 toggleFullscreen()
                 return true
+            }
+        }
+
+        if (
+            event.action == KeyEvent.ACTION_UP &&
+            !fullscreen &&
+            currentFocus !is EditText
+        ) {
+            val number = when (event.keyCode) {
+                KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> 1
+                KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_NUMPAD_2 -> 2
+                KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_NUMPAD_3 -> 3
+                KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_NUMPAD_4 -> 4
+                KeyEvent.KEYCODE_5, KeyEvent.KEYCODE_NUMPAD_5 -> 5
+                KeyEvent.KEYCODE_6, KeyEvent.KEYCODE_NUMPAD_6 -> 6
+                KeyEvent.KEYCODE_7, KeyEvent.KEYCODE_NUMPAD_7 -> 7
+                KeyEvent.KEYCODE_8, KeyEvent.KEYCODE_NUMPAD_8 -> 8
+                KeyEvent.KEYCODE_9, KeyEvent.KEYCODE_NUMPAD_9 -> 9
+                else -> null
+            }
+
+            if (number != null) {
+                val playlistIndex =
+                    visibleChannelPlaylistIndexes.getOrNull(number - 1)
+
+                if (playlistIndex != null) {
+                    channelSpinner.setSelection(playlistIndex)
+                    playStream()
+                    return true
+                }
             }
         }
 
