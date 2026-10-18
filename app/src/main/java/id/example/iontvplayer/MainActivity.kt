@@ -42,10 +42,31 @@ class MainActivity : Activity() {
     private lateinit var videoContainer: FrameLayout
     private lateinit var liveIndicator: LinearLayout
     private lateinit var liveIndicatorDot: View
+    private var liveIndicatorShownForCurrentStream = false
+    private var liveIndicatorHideAt = 0L
+
     private val liveIndicatorRunnable = object : Runnable {
         override fun run() {
             updateLiveIndicator()
-            controlsHandler.postDelayed(this, 1000L)
+            if (player?.isCurrentMediaItemLive == true &&
+                !liveIndicatorShownForCurrentStream
+            ) {
+                liveIndicatorShownForCurrentStream = true
+                liveIndicatorHideAt = android.os.SystemClock.elapsedRealtime() + 5000L
+            }
+            if (player?.isCurrentMediaItemLive != true) {
+                controlsHandler.postDelayed(this, 1000L)
+            } else if (
+                android.os.SystemClock.elapsedRealtime() < liveIndicatorHideAt
+            ) {
+                controlsHandler.postDelayed(this, 250L)
+            } else {
+                if (::liveIndicator.isInitialized) {
+                    liveIndicator.visibility = View.GONE
+                    liveIndicatorDot.clearAnimation()
+                    liveIndicatorDot.alpha = 1f
+                }
+            }
         }
     }
     private lateinit var urlInput: EditText
@@ -6024,6 +6045,8 @@ class MainActivity : Activity() {
                     })
                     exo.prepare()
                     controlsHandler.removeCallbacks(liveIndicatorRunnable)
+                    liveIndicatorShownForCurrentStream = false
+                    liveIndicatorHideAt = android.os.SystemClock.elapsedRealtime() + 5000L
                     controlsHandler.post(liveIndicatorRunnable)
                     exo.playWhenReady = true
                 }
@@ -6080,9 +6103,13 @@ class MainActivity : Activity() {
         if (!::liveIndicator.isInitialized) return
 
         val isLive = player?.isCurrentMediaItemLive == true
-        liveIndicator.visibility = if (isLive) View.VISIBLE else View.GONE
+        val stillInDisplayWindow =
+            android.os.SystemClock.elapsedRealtime() < liveIndicatorHideAt
 
-        if (isLive) {
+        liveIndicator.visibility =
+            if (isLive && stillInDisplayWindow) View.VISIBLE else View.GONE
+
+        if (isLive && stillInDisplayWindow) {
             if (liveIndicatorDot.animation == null) {
                 liveIndicatorDot.startAnimation(
                     android.view.animation.AlphaAnimation(0.2f, 1.0f).apply {
