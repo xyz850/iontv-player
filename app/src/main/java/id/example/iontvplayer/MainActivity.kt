@@ -1215,7 +1215,7 @@ class MainActivity : Activity() {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg)
-            setPadding(dp(4), dp(4), dp(4), dp(16))
+            setPadding(dp(4), dp(0), dp(4), dp(16))
         }
 
         playerView = PlayerView(this).apply {
