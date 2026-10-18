@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.content.pm.ActivityInfo
 import android.view.View
 import android.view.ViewGroup
+import android.view.KeyEvent
 import android.widget.FrameLayout
 import android.view.Gravity
 import android.view.WindowManager
@@ -1224,6 +1225,8 @@ class MainActivity : Activity() {
         }
         videoContainer = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
+            isFocusable = true
+            isFocusableInTouchMode = true
             addView(
                 playerView,
                 FrameLayout.LayoutParams(
@@ -2446,6 +2449,7 @@ class MainActivity : Activity() {
         settingsPanelView?.let { keepControlsVisibleWhileTouching(it) }
 
         playerView.setOnClickListener {
+            videoContainer.requestFocus()
             showPlaybackControls()
         }
         showPlaybackControls()
@@ -4530,6 +4534,7 @@ class MainActivity : Activity() {
             root.visibility = View.INVISIBLE
 
             fullscreen = true
+            videoContainer.requestFocus()
             settingsPanelView?.visibility = View.GONE
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             window.decorView.systemUiVisibility =
@@ -5876,6 +5881,23 @@ class MainActivity : Activity() {
             root.requestLayout()
             root.invalidate()
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val isOkKey =
+            event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            event.keyCode == KeyEvent.KEYCODE_ENTER ||
+            event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+
+        if (isOkKey && event.action == KeyEvent.ACTION_UP) {
+            val focused = currentFocus
+            if (focused === videoContainer || focused === playerView) {
+                toggleFullscreen()
+                return true
+            }
+        }
+
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onBackPressed() {
