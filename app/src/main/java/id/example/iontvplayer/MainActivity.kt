@@ -2242,19 +2242,10 @@ class MainActivity : Activity() {
             if (showOk) {
                 headingRow.addView(
                     TextView(this@MainActivity).apply {
-                        text = " OK "
-                        textSize = 12f
-                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        text = "OK"
+                        textSize = 11f
                         gravity = Gravity.CENTER
-                        setTextColor(Color.rgb(0, 245, 255))
-                        setPadding(dp(8), dp(1), dp(8), dp(1))
-                        background = android.graphics.drawable.GradientDrawable().apply {
-                            setColor(Color.rgb(5, 34, 48))
-                            setStroke(dp(2), Color.rgb(0, 245, 255))
-                            cornerRadius = dp(18).toFloat()
-                        }
-                        setShadowLayer(dp(4).toFloat(), 0f, 0f,
-                            Color.rgb(0, 180, 220))
+                        setTextColor(Color.rgb(190, 210, 224))
                         contentDescription = "Tombol OK seperti pada remote"
                     }
                 )
