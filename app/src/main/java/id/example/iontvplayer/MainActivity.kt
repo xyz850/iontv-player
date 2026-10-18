@@ -2239,17 +2239,6 @@ class MainActivity : Activity() {
                 LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             )
 
-            if (showOk) {
-                headingRow.addView(
-                    TextView(this@MainActivity).apply {
-                        text = "OK"
-                        textSize = 11f
-                        gravity = Gravity.CENTER
-                        setTextColor(Color.rgb(190, 210, 224))
-                        contentDescription = "Tombol OK seperti pada remote"
-                    }
-                )
-            }
 
             words.addView(headingRow)
             words.addView(
