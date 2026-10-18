@@ -2389,10 +2389,16 @@ class MainActivity : Activity() {
             )
         } else {
             // Potret: video, tombol pengaturan, kategori, dan daftar channel.
+            // Wadah video potret mengikuti rasio 16:9 sesuai lebar layar.
+            val portraitVideoHeight =
+                ((resources.displayMetrics.widthPixels - dp(8)) * 9f / 16f)
+                    .toInt()
+                    .coerceAtLeast(dp(160))
+
             mainContent.addView(
                 videoContainer,
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(250)
+                    ViewGroup.LayoutParams.MATCH_PARENT, portraitVideoHeight
                 ).apply {
                     bottomMargin = dp(2)
                 }
