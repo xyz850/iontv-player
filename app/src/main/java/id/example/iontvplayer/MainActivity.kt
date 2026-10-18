@@ -1215,7 +1215,7 @@ class MainActivity : Activity() {
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bg)
-            setPadding(dp(16))
+            setPadding(dp(4), dp(4), dp(4), dp(16))
         }
 
         playerView = PlayerView(this).apply {
@@ -2371,7 +2371,7 @@ class MainActivity : Activity() {
             mainContent.addView(
                 videoContainer,
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(250)
                 ).apply {
                     bottomMargin = dp(2)
                 }
