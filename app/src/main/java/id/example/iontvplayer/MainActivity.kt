@@ -2150,7 +2150,46 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, 0, 0, dp(4))
         }
-        remoteGuidePanel.addView(guideTitle)
+        val guideHeader = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        guideHeader.addView(
+            guideTitle,
+            LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+            )
+        )
+
+        val closeGuideButton = TextView(this).apply {
+            text = " EXIT "
+            textSize = 11f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(0, 245, 255))
+            setPadding(dp(8), dp(3), dp(8), dp(3))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.rgb(5, 34, 48))
+                setStroke(dp(1), Color.rgb(0, 245, 255))
+                cornerRadius = dp(8).toFloat()
+            }
+            isFocusable = true
+            isClickable = true
+            contentDescription = "Tutup papan panduan remote"
+            setOnClickListener {
+                remoteGuidePanel.visibility = View.GONE
+            }
+        }
+
+        guideHeader.addView(
+            closeGuideButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+        remoteGuidePanel.addView(guideHeader)
 
         fun addRemoteGuideRow(
             number: String,
@@ -2240,6 +2279,46 @@ class MainActivity : Activity() {
         addRemoteGuideRow("2", "MULAI MENONTON", "Pilih channel dengan tombol OK.", true)
         addRemoteGuideRow("3", "LAYAR PENUH", "Saat fokus di video, OK lagi untuk keluar.")
         addRemoteGuideRow("4", "KEMBALI", "Tekan BACK untuk kembali.")
+
+        // Catatan ini harus diperbarui setiap kali APK baru resmi dirilis.
+        remoteGuidePanel.addView(
+            View(this).apply {
+                setBackgroundColor(Color.rgb(22, 72, 91))
+            },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
+            ).apply {
+                topMargin = dp(5)
+                bottomMargin = dp(5)
+            }
+        )
+
+        remoteGuidePanel.addView(
+            TextView(this).apply {
+                text = "RIWAYAT RILIS"
+                textSize = 12f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(Color.rgb(0, 245, 255))
+            }
+        )
+
+        remoteGuidePanel.addView(
+            TextView(this).apply {
+                text = "18 OKTOBER 2026 • CATATAN RILIS INI"
+                textSize = 10f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(Color.WHITE)
+                setPadding(0, dp(2), 0, dp(2))
+            }
+        )
+
+        remoteGuidePanel.addView(
+            TextView(this).apply {
+                text = "Panduan remote bernomor dan tombol EXIT untuk menutup papan panduan."
+                textSize = 10f
+                setTextColor(Color.rgb(190, 210, 224))
+            }
+        )
 
         if (landscapeLayout) {
             // Daftar channel tetap di sisi kiri.
