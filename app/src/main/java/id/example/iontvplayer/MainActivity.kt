@@ -2290,6 +2290,16 @@ class MainActivity : Activity() {
             "TOMBOL ANGKA 1–9",
             "Tekan angka 1–9 untuk memutar kartu channel sesuai urutan yang terlihat."
         )
+        addRemoteGuideRow(
+            "6",
+            "VOLUME",
+            "Gunakan tombol VOL+ atau VOL− pada remote untuk mengatur suara media."
+        )
+        addRemoteGuideRow(
+            "7",
+            "EXIT",
+            "Tombol EXIT bergantung pada remote. ESC membuka dialog keluar jika didukung."
+        )
 
         // Catatan ini harus diperbarui setiap kali APK baru resmi dirilis.
         remoteGuidePanel.addView(
@@ -2315,7 +2325,7 @@ class MainActivity : Activity() {
 
         remoteGuidePanel.addView(
             TextView(this).apply {
-                text = "18 OKTOBER 2026 • CATATAN RILIS INI"
+                text = "19 OKTOBER 2026 • PEMERIKSAAN REMOTE"
                 textSize = 10f
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
                 setTextColor(Color.WHITE)
@@ -2325,7 +2335,7 @@ class MainActivity : Activity() {
 
         remoteGuidePanel.addView(
             TextView(this).apply {
-                text = "Panduan remote bernomor dan tombol EXIT untuk menutup papan panduan."
+                text = "Navigasi D-pad dan OK/ENTER diperbarui. Volume dan tombol EXIT fisik masih menunggu pengujian langsung di TV Box."
                 textSize = 10f
                 setTextColor(Color.rgb(190, 210, 224))
             }
