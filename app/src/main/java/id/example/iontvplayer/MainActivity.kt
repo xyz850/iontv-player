@@ -130,6 +130,15 @@ class MainActivity : Activity() {
     private val channelQualityBadgeViews =
         mutableMapOf<String, MutableList<TextView>>()
     private var activeQualityStreamUrl: String? = null
+    private var activePlaybackUrl: String? = null
+    private var activePlaybackHeaders: Map<String, String> = emptyMap()
+    private var activePlaybackDrmScheme: String? = null
+    private var activePlaybackDrmLicenseUrl: String? = null
+    private var activePlaybackDrmLicenseHeaders: Map<String, String> = emptyMap()
+    private var activePlaybackAlternateUrls: List<String> = emptyList()
+    private var activePlaybackAlternateHeaders: Map<String, Map<String, String>> = emptyMap()
+    private var activePlaybackChannelCardUrl: String? = null
+    private var lastAutoVideoRecoveryAtMs = 0L
 
     // Bingkai RGB hanya berjalan pada kartu channel yang sedang diputar.
     private var activeChannelCardUrl: String? = null
@@ -2484,15 +2493,7 @@ class MainActivity : Activity() {
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             setPadding(dp(5), dp(5), dp(5), dp(5))
             setOnClickListener {
-                val exo = player
-                if (exo != null && exo.currentMediaItem != null) {
-                    status.text = "Memuat ulang stream..."
-                    exo.seekToDefaultPosition()
-                    exo.prepare()
-                    exo.playWhenReady = true
-                } else {
-                    playStream()
-                }
+                restartActiveStream()
             }
         }
 
@@ -4748,15 +4749,7 @@ class MainActivity : Activity() {
             }
 
             refreshFullscreenButton.setOnClickListener {
-                val exo = player
-                if (exo != null && exo.currentMediaItem != null) {
-                    status.text = "Memuat ulang stream..."
-                    exo.seekToDefaultPosition()
-                    exo.prepare()
-                    exo.playWhenReady = true
-                } else {
-                    playStream()
-                }
+                restartActiveStream()
                 scheduleControlsAutoHide()
             }
 
@@ -5879,9 +5872,21 @@ class MainActivity : Activity() {
         drmLicenseHeaders: Map<String, String> = emptyMap(),
         alternateUrls: List<String> = emptyList(),
         alternateHeaders: Map<String, Map<String, String>> = emptyMap(),
-        channelCardUrl: String = url
+        channelCardUrl: String = url,
+        isAutoRecovery: Boolean = false
     ) {
         releasePlayer()
+
+        if (!isAutoRecovery) lastAutoVideoRecoveryAtMs = 0L
+        activePlaybackUrl = url
+        activePlaybackHeaders = headers
+        activePlaybackDrmScheme = drmScheme
+        activePlaybackDrmLicenseUrl = drmLicenseUrl
+        activePlaybackDrmLicenseHeaders = drmLicenseHeaders
+        activePlaybackAlternateUrls = alternateUrls
+        activePlaybackAlternateHeaders = alternateHeaders
+        activePlaybackChannelCardUrl = channelCardUrl
+
         activeChannelCardUrl = channelCardUrl
         updateActiveChannelCardNeon()
         activeQualityStreamUrl = url
@@ -5961,6 +5966,53 @@ class MainActivity : Activity() {
                 .build()
                 .also { exo ->
                     playerView.player = exo
+
+                    val lastFrameAtMs =
+                        java.util.concurrent.atomic.AtomicLong(0L)
+                    exo.setVideoFrameMetadataListener { _, _, _, _ ->
+                        lastFrameAtMs.set(android.os.SystemClock.elapsedRealtime())
+                    }
+
+                    val frameWatchdogHandler =
+                        android.os.Handler(android.os.Looper.getMainLooper())
+                    val frameWatchdog = object : Runnable {
+                        override fun run() {
+                            if (player !== exo || isFinishing || isDestroyed) {
+                                return
+                            }
+
+                            val now = android.os.SystemClock.elapsedRealtime()
+                            val lastFrame = lastFrameAtMs.get()
+                            val frameStalled =
+                                exo.isPlaying &&
+                                videoFrameRendered &&
+                                lastFrame > 0L &&
+                                now - lastFrame >= 20_000L
+
+                            if (frameStalled &&
+                                now - lastAutoVideoRecoveryAtMs >= 60_000L
+                            ) {
+                                lastAutoVideoRecoveryAtMs = now
+                                status.text = "Video macet, memulihkan stream…"
+                                playMedia(
+                                    url,
+                                    headers,
+                                    drmScheme,
+                                    drmLicenseUrl,
+                                    drmLicenseHeaders,
+                                    alternateUrls,
+                                    alternateHeaders,
+                                    channelCardUrl,
+                                    true
+                                )
+                                return
+                            }
+
+                            frameWatchdogHandler.postDelayed(this, 5_000L)
+                        }
+                    }
+                    frameWatchdogHandler.postDelayed(frameWatchdog, 5_000L)
+
                     val itemBuilder = MediaItem.Builder().setUri(url)
                     val cleanUrl = url.substringBefore("?")
 
@@ -6270,6 +6322,26 @@ class MainActivity : Activity() {
             liveIndicatorDot.clearAnimation()
             liveIndicatorDot.alpha = 1f
         }
+    }
+
+    private fun restartActiveStream() {
+        val url = activePlaybackUrl
+        if (url.isNullOrBlank()) {
+            playStream()
+            return
+        }
+
+        status.text = "Memulai ulang stream…"
+        playMedia(
+            url,
+            activePlaybackHeaders,
+            activePlaybackDrmScheme,
+            activePlaybackDrmLicenseUrl,
+            activePlaybackDrmLicenseHeaders,
+            activePlaybackAlternateUrls,
+            activePlaybackAlternateHeaders,
+            activePlaybackChannelCardUrl ?: url
+        )
     }
 
     private fun releasePlayer() {
