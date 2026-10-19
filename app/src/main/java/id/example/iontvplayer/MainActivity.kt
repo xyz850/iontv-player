@@ -1246,6 +1246,7 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.BLACK)
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
+        installVideoSwipeGestures()
         videoContainer = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
             isFocusable = true
@@ -4343,6 +4344,117 @@ class MainActivity : Activity() {
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
                 keepControlsVisibleWhileTouching(view.getChildAt(i))
+            }
+        }
+    }
+
+
+    // Gestur video: kiri mengatur volume, kanan mengatur kecerahan.
+    private fun installVideoSwipeGestures() {
+        val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+        var downX = 0f
+        var downY = 0f
+        var gestureSide = 0
+        var tracking = false
+        var handledSwipe = false
+        var startVolume = 0
+        var startBrightness = 0.5f
+
+        playerView.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    downX = event.x
+                    downY = event.y
+                    gestureSide = if (event.x < view.width / 2f) -1 else 1
+                    tracking = true
+                    handledSwipe = false
+                    startVolume = audio.getStreamVolume(
+                        android.media.AudioManager.STREAM_MUSIC
+                    )
+                    startBrightness = window.attributes.screenBrightness
+                        .takeIf { it >= 0f } ?: run {
+                            val current = android.provider.Settings.System.getInt(
+                                contentResolver,
+                                android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                                128
+                            )
+                            (current / 255f).coerceIn(0.05f, 1f)
+                        }
+                    true
+                }
+
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    if (!tracking) {
+                        false
+                    } else {
+                        val dx = event.x - downX
+                        val dy = event.y - downY
+                        val threshold = dp(24).toFloat()
+
+                        if (!handledSwipe &&
+                            kotlin.math.abs(dy) > threshold &&
+                            kotlin.math.abs(dy) >
+                                kotlin.math.abs(dx) * 1.25f
+                        ) {
+                            handledSwipe = true
+                        }
+
+                        if (!handledSwipe) {
+                            true
+                        } else {
+                            val height = view.height.coerceAtLeast(1).toFloat()
+                            val fraction = (-dy / height).coerceIn(-1f, 1f)
+
+                            if (gestureSide < 0) {
+                                val maxVolume = audio.getStreamMaxVolume(
+                                    android.media.AudioManager.STREAM_MUSIC
+                                ).coerceAtLeast(1)
+                                val nextVolume = (
+                                    startVolume + fraction * maxVolume * 2f
+                                ).toInt().coerceIn(0, maxVolume)
+
+                                audio.setStreamVolume(
+                                    android.media.AudioManager.STREAM_MUSIC,
+                                    nextVolume,
+                                    0
+                                )
+                            } else {
+                                val next = (startBrightness + fraction * 1.5f)
+                                    .coerceIn(0.05f, 1f)
+                                val attrs = window.attributes
+                                attrs.screenBrightness = next
+                                window.attributes = attrs
+                                if (fullscreen) {
+                                    previousScreenBrightness = next
+                                }
+                            }
+                            true
+                        }
+                    }
+                }
+
+                android.view.MotionEvent.ACTION_UP -> {
+                    val wasSwipe = handledSwipe
+                    val wasTap = tracking &&
+                        kotlin.math.abs(event.x - downX) < dp(24) &&
+                        kotlin.math.abs(event.y - downY) < dp(24)
+
+                    tracking = false
+                    handledSwipe = false
+
+                    if (wasTap) {
+                        showPlaybackControls()
+                    }
+                    wasSwipe || wasTap
+                }
+
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    tracking = false
+                    handledSwipe = false
+                    true
+                }
+
+                else -> tracking
             }
         }
     }
