@@ -148,7 +148,7 @@ class MainActivity : Activity() {
     private var targetPlaylistSyncRunnable: Runnable? = null
     private var targetPlaylistSyncInProgress = false
     private var targetPlaylistSyncStopped = false
-    private val targetPlaylistSyncIntervalMs = 60 * 1000L
+    private val targetPlaylistSyncIntervalMs = 5 * 60 * 1000L
 
     private var urlScanInProgress = false
     private var urlMonitorRunnable: Runnable? = null
