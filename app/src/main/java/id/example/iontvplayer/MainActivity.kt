@@ -4046,14 +4046,23 @@ class MainActivity : Activity() {
                     .use { it.readText() }
 
                 val finalUrl = connection.url.toString()
-                val channels = parsePlaylist(text, finalUrl)
+                val channels = (parsePlaylist(text, finalUrl)
                     .filterNot {
                         val name = it.name.trim()
                         name.equals("001 TRAKTIR KOPI", ignoreCase = true) ||
                             name.equals("01 TRAKTIR KOPI", ignoreCase = true) ||
                             name.equals("TRAKTIR KOPI", ignoreCase = true) ||
                             name.equals("TES", ignoreCase = true)
-                    }
+                    } + PlaylistEntry(
+                        name = "Indosiar XPola Test",
+                        url = "https://nextgenz.my.id/event/pidio/play.mpd?id=205&type=dash",
+                        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/INDOSIAR_Logo.png/1280px-INDOSIAR_Logo.png",
+                        headers = mapOf(
+                            "User-Agent" to "VidioPlayer/6.31.6",
+                            "Referer" to "http://www.vidio.com/",
+                            "Origin" to "http://www.vidio.com/"
+                        )
+                    ))
 
                 runOnUiThread {
                     dismissSplash()
