@@ -6369,9 +6369,49 @@ class MainActivity : Activity() {
             event.keyCode == KeyEvent.KEYCODE_ENTER ||
             event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
 
+        // ESC membuka dialog keluar jika remote mengirim kode ESC.
+        if (
+            event.action == KeyEvent.ACTION_UP &&
+            event.keyCode == KeyEvent.KEYCODE_ESCAPE
+        ) {
+            showCyberExitDialog()
+            return true
+        }
+
         if (isOkKey && event.action == KeyEvent.ACTION_UP) {
-            val focused = currentFocus
-            if (focused === videoContainer || focused === playerView) {
+            var node: View? = currentFocus
+            var focusedCard: LinearLayout? = null
+            var focusInVideo = false
+
+            val cards = channelCardViews.values
+                .flatten()
+                .distinct()
+                .filter { it.isShown && it.isFocusable }
+
+            while (node != null) {
+                val matchingCard = cards.firstOrNull { it === node }
+                if (matchingCard != null) {
+                    focusedCard = matchingCard
+                    break
+                }
+
+                if (node === videoContainer || node === playerView) {
+                    focusInVideo = true
+                }
+
+                node = node.parent as? View
+            }
+
+            if (focusedCard != null) {
+                focusedCard.performClick()
+                return true
+            }
+
+            if (
+                focusInVideo ||
+                currentFocus === videoContainer ||
+                currentFocus === playerView
+            ) {
                 toggleFullscreen()
                 return true
             }
