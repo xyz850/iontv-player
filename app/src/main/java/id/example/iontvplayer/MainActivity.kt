@@ -1869,6 +1869,7 @@ class MainActivity : Activity() {
         )
 
         status = TextView(this).apply {
+            visibility = View.GONE
             text = "Masukkan URL stream yang kamu punya atau berhak akses."
             textSize = 12f
             setTextColor(muted)
@@ -1885,6 +1886,7 @@ class MainActivity : Activity() {
         }
 
         val hint = TextView(this).apply {
+            visibility = View.GONE
             text = "Resolusi bergantung pada stream. DRM memerlukan konfigurasi dan lisensi dari penyedia."
             textSize = 11f
             setTextColor(muted)
