@@ -1,17 +1,18 @@
 plugins {
-    id 'com.android.application' version '8.1.1'
+    id 'com.android.application'
 }
 
 android {
-    namespace 'com.mytv.app'
+    namespace 'id.example.iontvplayer'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.mytv.app"
+        applicationId "id.example.iontvplayer"
         minSdk 24
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -22,18 +23,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
-    // ExoPlayer Media3 Dependencies
+    // ExoPlayer Media3 untuk pemutar TV / M3U
     implementation 'androidx.media3:media3-exoplayer:1.2.0'
     implementation 'androidx.media3:media3-ui:1.2.0'
-    implementation 'androidx.media3:media3-exoplayer-dash:1.2.0'
 }
