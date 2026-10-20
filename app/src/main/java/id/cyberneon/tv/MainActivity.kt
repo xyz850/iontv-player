@@ -5672,6 +5672,7 @@ class MainActivity : Activity() {
         val indosiarUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=205&type=dash"
         val antvUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=782&type=dash"
         val transTvUrl = "https://video.detik.com/transtv-sec/smil:transtv.smil/playlist.m3u8?wowzatokenstarttime=0&wowzatokenendtime=1786477084743&wowzatokenhash=67bQO-FmZtY5VJrBbFGFcV8AMTJ3jqBjhY79i0nA_dU%3D"
+        val trans7Url = "https://video.detik.com/trans7-sec/smil:trans7.smil/playlist.m3u8?wowzatokenstarttime=0&wowzatokenendtime=1786478234906&wowzatokenhash=mROhvnOElOh8J9-s6mmxi52TJWiGXGgxaQxvYQ-WUdg%3D"
 
         val vidioHeaders = mapOf(
             "User-Agent" to "VidioPlayer/6.31.6",
@@ -5694,7 +5695,8 @@ class MainActivity : Activity() {
             "INDOSIAR 2 ALTERNATIF",
             "ANTV ALTERNATIF",
             "ANTV 1 ALTERNATIF",
-            "TRANS TV ALTERNATIF"
+            "TRANS TV ALTERNATIF",
+            "TRANS7 ALTERNATIF"
         )
 
         val channels = entries.filterNot { entry ->
@@ -5705,7 +5707,7 @@ class MainActivity : Activity() {
             PlaylistEntry(
                 name = "SCTV 2 ALTERNATIF",
                 url = sctvUrl,
-                groupTitle = "INDONESIA",
+                groupTitle = "ALTERNATIF",
                 logoUrl = "https://www.mncvision.id/userfiles/image/channel/sctv.png",
                 headers = vidioHeaders,
                 alternateUrls = listOf(beetvUrl),
@@ -5717,7 +5719,7 @@ class MainActivity : Activity() {
             PlaylistEntry(
                 name = "INDOSIAR 2 ALTERNATIF",
                 url = indosiarUrl,
-                groupTitle = "INDONESIA",
+                groupTitle = "ALTERNATIF",
                 logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/INDOSIAR_Logo.png/1280px-INDOSIAR_Logo.png",
                 headers = vidioHeaders
             )
@@ -5727,7 +5729,7 @@ class MainActivity : Activity() {
             PlaylistEntry(
                 name = "ANTV 1 ALTERNATIF",
                 url = antvUrl,
-                groupTitle = "INDONESIA",
+                groupTitle = "ALTERNATIF",
                 logoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRt-8ZOCCFoPNA9ms_SLoPbTfiivrl_7xyCxg&s",
                 headers = vidioHeaders
             )
@@ -5737,8 +5739,18 @@ class MainActivity : Activity() {
             PlaylistEntry(
                 name = "TRANS TV ALTERNATIF",
                 url = transTvUrl,
-                groupTitle = "INDONESIA",
+                groupTitle = "ALTERNATIF",
                 logoUrl = "https://upload.wikimedia.org/wikipedia/commons/c/c2/Logo_Trans_TV.png",
+                headers = transTvHeaders
+            )
+        )
+
+        channels.add(
+            PlaylistEntry(
+                name = "TRANS7 ALTERNATIF",
+                url = trans7Url,
+                groupTitle = "ALTERNATIF",
+                logoUrl = "https://upload.wikimedia.org/wikipedia/id/5/5f/Trans7_2013.svg",
                 headers = transTvHeaders
             )
         )
