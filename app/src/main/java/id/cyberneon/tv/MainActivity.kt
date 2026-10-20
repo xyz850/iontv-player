@@ -1,4 +1,4 @@
-package id.example.iontvplayer
+package id.cyberneon.tv
 import android.animation.ValueAnimator
 import android.net.Uri
 import android.util.Base64
@@ -35,6 +35,125 @@ import androidx.media3.exoplayer.drm.LocalMediaDrmCallback
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
+
+
+private object FootballBadgeLoader {
+    private val bitmapCache =
+        java.util.concurrent.ConcurrentHashMap<String, android.graphics.Bitmap>()
+    private val pending =
+        mutableMapOf<String, MutableList<(android.graphics.Bitmap?) -> Unit>>()
+    private val loading = mutableSetOf<String>()
+    private val executor =
+        java.util.concurrent.Executors.newFixedThreadPool(2)
+
+    private fun normalize(value: String): String =
+        value.filter { it.isLetterOrDigit() }.lowercase()
+
+    fun load(
+        team: String,
+        callback: (android.graphics.Bitmap?) -> Unit
+    ) {
+        val clean = team.trim()
+        if (clean.isBlank()) {
+            callback(null)
+            return
+        }
+
+        val key = clean.lowercase()
+        var cached: android.graphics.Bitmap? = null
+        var startRequest = false
+
+        synchronized(this) {
+            cached = bitmapCache[key]
+            if (cached == null) {
+                pending.getOrPut(key) { mutableListOf() }.add(callback)
+                startRequest = loading.add(key)
+            }
+        }
+
+        if (cached != null) {
+            callback(cached)
+            return
+        }
+        if (!startRequest) return
+
+        executor.execute {
+            var apiConnection: java.net.HttpURLConnection? = null
+            var imageConnection: java.net.HttpURLConnection? = null
+            var bitmap: android.graphics.Bitmap? = null
+
+            try {
+                val encoded = java.net.URLEncoder.encode(clean, "UTF-8")
+                val apiUrl =
+                    "https://www.thesportsdb.com/api/v1/json/123/searchteams.php?t=$encoded"
+
+                apiConnection =
+                    (java.net.URL(apiUrl).openConnection()
+                        as java.net.HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        setRequestProperty("User-Agent", "CyberNeonTV")
+                    }
+
+                if (apiConnection.responseCode == 200) {
+                    val body = apiConnection.inputStream.bufferedReader()
+                        .use { it.readText() }
+                    val teams = org.json.JSONObject(body).optJSONArray("teams")
+                    var badgeUrl = ""
+
+                    if (teams != null) {
+                        for (i in 0 until teams.length()) {
+                            val item = teams.optJSONObject(i) ?: continue
+                            val actualName = item.optString("strTeam", "")
+                            if (normalize(actualName) == normalize(clean)) {
+                                badgeUrl = item.optString("strBadge", "")
+                                break
+                            }
+                        }
+
+                        // Gunakan hasil tunggal hanya jika API mengembalikan satu tim.
+                        if (badgeUrl.isBlank() && teams.length() == 1) {
+                            badgeUrl = teams.optJSONObject(0)
+                                ?.optString("strBadge", "").orEmpty()
+                        }
+                    }
+
+                    if (badgeUrl.startsWith("https://")) {
+                        imageConnection =
+                            (java.net.URL(badgeUrl).openConnection()
+                                as java.net.HttpURLConnection).apply {
+                                requestMethod = "GET"
+                                connectTimeout = 8000
+                                readTimeout = 10000
+                                setRequestProperty("User-Agent", "CyberNeonTV")
+                            }
+
+                        if (imageConnection.responseCode == 200) {
+                            bitmap = imageConnection.inputStream.use {
+                                android.graphics.BitmapFactory.decodeStream(it)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // Logo gagal dimuat: inisial tim tetap menjadi cadangan.
+            } finally {
+                apiConnection?.disconnect()
+                imageConnection?.disconnect()
+            }
+
+            val callbacks: List<(android.graphics.Bitmap?) -> Unit> =
+                synchronized(this) {
+                    if (bitmap != null) bitmapCache[key] = bitmap!!
+                    loading.remove(key)
+                    pending.remove(key)?.toList() ?: emptyList()
+                }
+
+            callbacks.forEach { it(bitmap) }
+        }
+    }
+}
 
 class MainActivity : Activity() {
     private var player: ExoPlayer? = null
@@ -3713,7 +3832,7 @@ class MainActivity : Activity() {
                         .split(Regex("""\s+"""))
                         .filter { it.isNotBlank() }
 
-                    val result = if (words.size > 1) {
+                    return if (words.size > 1) {
                         words.take(3).joinToString("") {
                             it.first().uppercase()
                         }
@@ -3721,56 +3840,61 @@ class MainActivity : Activity() {
                         team.filter { it.isLetterOrDigit() }
                             .take(3)
                             .uppercase()
-                    }
-                    return result.ifBlank { "FC" }
+                    }.ifBlank { "FC" }
                 }
 
-                LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                val teamLogoLayout = layoutInflater.inflate(
+                    R.layout.item_football_team_logos,
+                    null,
+                    false
+                ).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         dp(68), dp(40)
                     ).apply {
                         marginEnd = dp(8)
                     }
                     contentDescription = "Emblem pertandingan ${entry.name}"
+                }
 
-                    for (side in 0..1) {
-                        val team = teams.getOrNull(side).orEmpty()
-                        addView(
-                            TextView(this@MainActivity).apply {
-                                text = teamInitials(team)
-                                textSize = 9f
-                                setTypeface(null, android.graphics.Typeface.BOLD)
-                                gravity = Gravity.CENTER
-                                includeFontPadding = false
-                                maxLines = 1
-                                setTextColor(Color.rgb(0, 245, 255))
-                                setPadding(dp(1), dp(2), dp(1), dp(2))
-                                background =
-                                    android.graphics.drawable.GradientDrawable().apply {
-                                        shape =
-                                            android.graphics.drawable.GradientDrawable.RECTANGLE
-                                        cornerRadius = dp(9).toFloat()
-                                        setColor(Color.rgb(9, 24, 42))
-                                        setStroke(
-                                            dp(1),
-                                            if (side == 0) {
-                                                Color.rgb(0, 245, 255)
-                                            } else {
-                                                Color.rgb(192, 132, 252)
-                                            }
-                                        )
-                                    }
-                                contentDescription =
-                                    "Emblem ${team.ifBlank { "tim tidak dikenal" }}"
-                            },
-                            LinearLayout.LayoutParams(dp(32), dp(34)).apply {
-                                if (side == 1) marginStart = dp(4)
+                val homeImage = teamLogoLayout.findViewById<ImageView>(
+                    R.id.footballHomeLogo
+                )
+                val awayImage = teamLogoLayout.findViewById<ImageView>(
+                    R.id.footballAwayLogo
+                )
+                val homeFallback = teamLogoLayout.findViewById<TextView>(
+                    R.id.footballHomeFallback
+                )
+                val awayFallback = teamLogoLayout.findViewById<TextView>(
+                    R.id.footballAwayFallback
+                )
+
+                val logoTargets = listOf(
+                    Triple(teams.getOrNull(0).orEmpty(), homeImage, homeFallback),
+                    Triple(teams.getOrNull(1).orEmpty(), awayImage, awayFallback)
+                )
+
+                logoTargets.forEach { (team, image, fallback) ->
+                    fallback.text = teamInitials(team)
+                    image.tag = team.trim()
+                    image.contentDescription =
+                        "Logo ${team.ifBlank { "tim tidak dikenal" }}"
+
+                    FootballBadgeLoader.load(team) { bitmap ->
+                        image.post {
+                            if (image.tag == team.trim()) {
+                                if (bitmap != null) {
+                                    image.setImageBitmap(bitmap)
+                                    fallback.visibility = View.GONE
+                                } else {
+                                    fallback.visibility = View.VISIBLE
+                                }
                             }
-                        )
+                        }
                     }
                 }
+
+                teamLogoLayout
             } else {
                 ImageView(this).apply {
                     layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {

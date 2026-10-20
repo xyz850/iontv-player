@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "id.example.iontvplayer"
+    namespace = "id.cyberneon.tv"
     compileSdk = 35
 
     compileOptions {

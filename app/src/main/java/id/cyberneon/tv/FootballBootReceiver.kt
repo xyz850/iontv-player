@@ -1,4 +1,4 @@
-package id.example.iontvplayer
+package id.cyberneon.tv
 
 import android.content.BroadcastReceiver
 import android.content.Context

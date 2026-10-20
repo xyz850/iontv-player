@@ -1,4 +1,4 @@
-package id.example.iontvplayer
+package id.cyberneon.tv
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -20,7 +20,7 @@ import java.util.TimeZone
 object FootballReminder {
     private const val PREFS = "iontv_football_reminder"
     private const val KEY_MATCHES = "scheduled_matches"
-    private const val ACTION_MATCH = "id.example.iontvplayer.MATCH_ALARM"
+    private const val ACTION_MATCH = "id.cyberneon.tv.MATCH_ALARM"
     private const val FIVE_MINUTES = 5 * 60 * 1000L
     private const val LOOKAHEAD = 30L * 24 * 60 * 60 * 1000
 
