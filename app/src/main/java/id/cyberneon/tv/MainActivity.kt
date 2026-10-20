@@ -3822,10 +3822,25 @@ class MainActivity : Activity() {
             card.addView(numberLabel)
 
             val logo: View = if (isFootballEvent(entry)) {
-                val teams = entry.name.split(
-                    Regex("""(?i)\s+(?:vs?\.?|@)\s+|\s+-\s+"""),
-                    limit = 2
-                )
+                // Bersihkan awalan jadwal dan label sebelum mencari logo tim.
+                val matchName = entry.name
+                    .replace(Regex("""(?i)^\s*(?:\[[^\]]*]\s*)+"""), "")
+                    .replace(
+                        Regex("""(?i)\s*\((?:server|master|backup|stream)[^)]*\)\s*$"""),
+                        ""
+                    )
+                    .replace(
+                        Regex("""(?i)\s*\[(?:zhubo|dazn|espn|tnt sports)\]\s*$"""),
+                        ""
+                    )
+                    .trim()
+
+                val teams = matchName
+                    .split(
+                        Regex("""(?i)\s+(?:vs?\.?|@)\s+|\s+-\s+"""),
+                        limit = 2
+                    )
+                    .map { it.trim() }
 
                 fun teamInitials(team: String): String {
                     val words = team.trim()
