@@ -3702,15 +3702,86 @@ class MainActivity : Activity() {
             }
             card.addView(numberLabel)
 
-            val logo = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
-                    marginEnd = dp(8)
+            val logo: View = if (isFootballEvent(entry)) {
+                val teams = entry.name.split(
+                    Regex("""(?i)\s+(?:vs?\.?|@)\s+|\s+-\s+"""),
+                    limit = 2
+                )
+
+                fun teamInitials(team: String): String {
+                    val words = team.trim()
+                        .split(Regex("""\s+"""))
+                        .filter { it.isNotBlank() }
+
+                    val result = if (words.size > 1) {
+                        words.take(3).joinToString("") {
+                            it.first().uppercase()
+                        }
+                    } else {
+                        team.filter { it.isLetterOrDigit() }
+                            .take(3)
+                            .uppercase()
+                    }
+                    return result.ifBlank { "FC" }
                 }
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                setBackgroundColor(Color.TRANSPARENT)
-                setPadding(dp(2), dp(2), dp(2), dp(2))
-                setImageResource(R.drawable.ic_cyber_neon_tv)
-                contentDescription = "Logo ${entry.name}"
+
+                LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        dp(68), dp(40)
+                    ).apply {
+                        marginEnd = dp(8)
+                    }
+                    contentDescription = "Emblem pertandingan ${entry.name}"
+
+                    for (side in 0..1) {
+                        val team = teams.getOrNull(side).orEmpty()
+                        addView(
+                            TextView(this@MainActivity).apply {
+                                text = teamInitials(team)
+                                textSize = 9f
+                                setTypeface(null, android.graphics.Typeface.BOLD)
+                                gravity = Gravity.CENTER
+                                includeFontPadding = false
+                                maxLines = 1
+                                setTextColor(Color.rgb(0, 245, 255))
+                                setPadding(dp(1), dp(2), dp(1), dp(2))
+                                background =
+                                    android.graphics.drawable.GradientDrawable().apply {
+                                        shape =
+                                            android.graphics.drawable.GradientDrawable.RECTANGLE
+                                        cornerRadius = dp(9).toFloat()
+                                        setColor(Color.rgb(9, 24, 42))
+                                        setStroke(
+                                            dp(1),
+                                            if (side == 0) {
+                                                Color.rgb(0, 245, 255)
+                                            } else {
+                                                Color.rgb(192, 132, 252)
+                                            }
+                                        )
+                                    }
+                                contentDescription =
+                                    "Emblem ${team.ifBlank { "tim tidak dikenal" }}"
+                            },
+                            LinearLayout.LayoutParams(dp(32), dp(34)).apply {
+                                if (side == 1) marginStart = dp(4)
+                            }
+                        )
+                    }
+                }
+            } else {
+                ImageView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+                        marginEnd = dp(8)
+                    }
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setBackgroundColor(Color.TRANSPARENT)
+                    setPadding(dp(2), dp(2), dp(2), dp(2))
+                    setImageResource(R.drawable.ic_cyber_neon_tv)
+                    contentDescription = "Logo ${entry.name}"
+                }
             }
             card.addView(logo)
 
