@@ -5663,7 +5663,7 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    // Channel alternatif untuk pengujian sumber tanpa metadata DRM.
+    // Channel alternatif Indonesia. Channel utama dari playlist tetap dipertahankan.
     private fun withSctvTestChannel(
         entries: List<PlaylistEntry>
     ): List<PlaylistEntry> {
@@ -5671,6 +5671,7 @@ class MainActivity : Activity() {
         val beetvUrl = "https://beetv.my.id/xstreamx/vd.m3u8?ch=sctv"
         val indosiarUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=205&type=dash"
         val antvUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=782&type=dash"
+        val transTvUrl = "https://video.detik.com/transtv-sec/smil:transtv.smil/playlist.m3u8?wowzatokenstarttime=0&wowzatokenendtime=1786477084743&wowzatokenhash=67bQO-FmZtY5VJrBbFGFcV8AMTJ3jqBjhY79i0nA_dU%3D"
 
         val vidioHeaders = mapOf(
             "User-Agent" to "VidioPlayer/6.31.6",
@@ -5678,22 +5679,31 @@ class MainActivity : Activity() {
             "Origin" to "http://www.vidio.com"
         )
 
+        val transTvHeaders = mapOf(
+            "Referer" to "https://20.detik.com/",
+            "Origin" to "https://20.detik.com",
+            "Cookie" to "cshx=3bcdb206",
+            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
+        )
+
         val alternativeNames = setOf(
             "SCTV 2 - TES",
             "SCTV ALTERNATIF",
+            "SCTV 2 ALTERNATIF",
             "INDOSIAR ALTERNATIF",
-            "ANTV ALTERNATIF"
+            "INDOSIAR 2 ALTERNATIF",
+            "ANTV ALTERNATIF",
+            "ANTV 1 ALTERNATIF",
+            "TRANS TV ALTERNATIF"
         )
 
         val channels = entries.filterNot { entry ->
-            alternativeNames.any { name ->
-                entry.name.equals(name, ignoreCase = true)
-            }
+            alternativeNames.any { it.equals(entry.name.trim(), ignoreCase = true) }
         }.toMutableList()
 
         channels.add(
             PlaylistEntry(
-                name = "SCTV ALTERNATIF",
+                name = "SCTV 2 ALTERNATIF",
                 url = sctvUrl,
                 groupTitle = "INDONESIA",
                 logoUrl = "https://www.mncvision.id/userfiles/image/channel/sctv.png",
@@ -5705,7 +5715,7 @@ class MainActivity : Activity() {
 
         channels.add(
             PlaylistEntry(
-                name = "INDOSIAR ALTERNATIF",
+                name = "INDOSIAR 2 ALTERNATIF",
                 url = indosiarUrl,
                 groupTitle = "INDONESIA",
                 logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/INDOSIAR_Logo.png/1280px-INDOSIAR_Logo.png",
@@ -5715,11 +5725,21 @@ class MainActivity : Activity() {
 
         channels.add(
             PlaylistEntry(
-                name = "ANTV ALTERNATIF",
+                name = "ANTV 1 ALTERNATIF",
                 url = antvUrl,
                 groupTitle = "INDONESIA",
                 logoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRt-8ZOCCFoPNA9ms_SLoPbTfiivrl_7xyCxg&s",
                 headers = vidioHeaders
+            )
+        )
+
+        channels.add(
+            PlaylistEntry(
+                name = "TRANS TV ALTERNATIF",
+                url = transTvUrl,
+                groupTitle = "INDONESIA",
+                logoUrl = "https://upload.wikimedia.org/wikipedia/commons/c/c2/Logo_Trans_TV.png",
+                headers = transTvHeaders
             )
         )
 
