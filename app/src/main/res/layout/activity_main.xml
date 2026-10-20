@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0A1118">
+
+    <!-- Container Pemutar Video (Atas) -->
+    <FrameLayout
+        android:id="@+id/playerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="230dp"
+        android:background="#000000">
+
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:use_controller="true"
+            app:resize_mode="fit" />
+    </FrameLayout>
+
+    <!-- Header Logo & Title ionTV -->
+    <LinearLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="#0F1B26">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ion TV"
+            android:textColor="#00A8FF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Indonesia ▼"
+            android:textColor="#FFFFFF"
+            android:background="#0088CC"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Daftar Channel (Bawah) -->
+    <ListView
+        android:id="@+id/listViewChannels"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="#1A2836"
+        android:dividerHeight="1dp" />
+
+</LinearLayout>

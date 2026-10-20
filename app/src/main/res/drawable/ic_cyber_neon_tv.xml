@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- Latar layar TV -->
+    <path
+        android:fillColor="#071426"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:pathData="M13,18 L51,18 Q56,18 56,23 L56,45 Q56,50 51,50 L13,50 Q8,50 8,45 L8,23 Q8,18 13,18 Z" />
+
+    <!-- Antena neon -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M24,18 L17,9 M40,18 L47,9" />
+
+    <!-- Sorotan ungu di layar -->
+    <path
+        android:fillColor="#9B5CFF"
+        android:pathData="M14,23 L17,23 L17,45 L14,45 Z" />
+
+    <!-- Tombol play -->
+    <path
+        android:fillColor="#00E5FF"
+        android:strokeColor="#00E5FF"
+        android:strokeLineJoin="round"
+        android:pathData="M26,26 L26,42 L40,34 Z" />
+
+    <!-- Kaki TV -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M25,51 L39,51 L42,56 L22,56 Z" />
+
+    <!-- Garis neon bawah -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M17,59 L47,59 L47,61 L17,61 Z" />
+
+</vector>
