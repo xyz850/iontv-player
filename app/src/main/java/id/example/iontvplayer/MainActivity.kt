@@ -5969,6 +5969,9 @@ class MainActivity : Activity() {
 
                     val lastFrameAtMs =
                         java.util.concurrent.atomic.AtomicLong(0L)
+                    val bufferingSinceMs =
+                        java.util.concurrent.atomic.AtomicLong(0L)
+
                     exo.setVideoFrameMetadataListener { _, _, _, _ ->
                         lastFrameAtMs.set(android.os.SystemClock.elapsedRealtime())
                     }
@@ -5989,11 +5992,21 @@ class MainActivity : Activity() {
                                 lastFrame > 0L &&
                                 now - lastFrame >= 20_000L
 
-                            if (frameStalled &&
+                            val bufferingSince = bufferingSinceMs.get()
+                            val bufferingStalled =
+                                videoFrameRendered &&
+                                bufferingSince > 0L &&
+                                now - bufferingSince >= 30_000L
+
+                            if ((frameStalled || bufferingStalled) &&
                                 now - lastAutoVideoRecoveryAtMs >= 60_000L
                             ) {
                                 lastAutoVideoRecoveryAtMs = now
-                                status.text = "Video macet, memulihkan stream…"
+                                status.text = if (bufferingStalled) {
+                                    "Buffering terlalu lama, memulihkan stream…"
+                                } else {
+                                    "Video macet, memulihkan stream…"
+                                }
                                 playMedia(
                                     url,
                                     headers,
@@ -6074,9 +6087,21 @@ class MainActivity : Activity() {
 
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             when (playbackState) {
-                                Player.STATE_BUFFERING -> showVideoLoading()
-                                Player.STATE_IDLE, Player.STATE_ENDED -> hideVideoLoading()
+                                Player.STATE_BUFFERING -> {
+                                    if (videoFrameRendered) {
+                                        bufferingSinceMs.compareAndSet(
+                                            0L,
+                                            android.os.SystemClock.elapsedRealtime()
+                                        )
+                                    }
+                                    showVideoLoading()
+                                }
+                                Player.STATE_IDLE, Player.STATE_ENDED -> {
+                                    bufferingSinceMs.set(0L)
+                                    hideVideoLoading()
+                                }
                                 Player.STATE_READY -> {
+                                    bufferingSinceMs.set(0L)
                                     if (videoFrameRendered) hideVideoLoading()
                                 }
                             }
