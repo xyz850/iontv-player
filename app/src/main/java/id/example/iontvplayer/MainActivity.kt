@@ -5987,7 +5987,8 @@ class MainActivity : Activity() {
                             val now = android.os.SystemClock.elapsedRealtime()
                             val lastFrame = lastFrameAtMs.get()
                             val frameStalled =
-                                exo.isPlaying &&
+                                exo.playWhenReady &&
+                                exo.playbackState == Player.STATE_READY &&
                                 videoFrameRendered &&
                                 lastFrame > 0L &&
                                 now - lastFrame >= 20_000L
