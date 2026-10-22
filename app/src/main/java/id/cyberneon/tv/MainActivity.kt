@@ -278,6 +278,12 @@ class MainActivity : Activity() {
     private var targetPlaylistSyncStopped = false
     private val targetPlaylistSyncIntervalMs = 30 * 60 * 1000L
 
+    // Buccu diperiksa terpisah setiap 5 menit.
+    private val buccuPlaylistSyncHandler = Handler(Looper.getMainLooper())
+    private var buccuPlaylistSyncRunnable: Runnable? = null
+    private var buccuPlaylistSyncInProgress = false
+    private val buccuPlaylistSyncIntervalMs = 5 * 60 * 1000L
+
     private var urlScanInProgress = false
     private var urlMonitorRunnable: Runnable? = null
 
@@ -5532,6 +5538,7 @@ class MainActivity : Activity() {
                             "Playlist dimuat: ${channels.size} channel."
                         startUrlMonitoring()
                         startTargetPlaylistAutoSync()
+                        startBuccuPlaylistAutoSync()
 
                         if (autoPlayFirst) {
                             channelSpinner.post {
@@ -5588,6 +5595,169 @@ class MainActivity : Activity() {
             task,
             targetPlaylistSyncIntervalMs
         )
+    }
+
+    private fun startBuccuPlaylistAutoSync() {
+        if (targetPlaylistSyncStopped || isFinishing || isDestroyed ||
+            loadedPlaylistUrl != fixedPlaylistUrl
+        ) return
+
+        buccuPlaylistSyncRunnable?.let {
+            buccuPlaylistSyncHandler.removeCallbacks(it)
+        }
+
+        val task = object : Runnable {
+            override fun run() {
+                if (targetPlaylistSyncStopped || isFinishing || isDestroyed) {
+                    return
+                }
+
+                syncBuccuPlaylist()
+
+                if (!targetPlaylistSyncStopped && !isFinishing && !isDestroyed) {
+                    buccuPlaylistSyncHandler.postDelayed(
+                        this,
+                        buccuPlaylistSyncIntervalMs
+                    )
+                }
+            }
+        }
+
+        buccuPlaylistSyncRunnable = task
+        buccuPlaylistSyncHandler.postDelayed(
+            task,
+            buccuPlaylistSyncIntervalMs
+        )
+    }
+
+    private fun syncBuccuPlaylist() {
+        if (buccuPlaylistSyncInProgress ||
+            targetPlaylistSyncStopped ||
+            loadedPlaylistUrl != fixedPlaylistUrl ||
+            playlistChannels.isEmpty() ||
+            isFinishing || isDestroyed
+        ) return
+
+        buccuPlaylistSyncInProgress = true
+
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                val conn = (java.net.URL(
+                    "https://xyz850.github.io/dev/buccu.m3u"
+                ).openConnection() as java.net.HttpURLConnection).apply {
+                    instanceFollowRedirects = true
+                    connectTimeout = 5_000
+                    readTimeout = 10_000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "*/*")
+                }
+                connection = conn
+
+                if (conn.responseCode !in 200..299) {
+                    throw IllegalStateException("Buccu HTTP error")
+                }
+
+                val text = conn.inputStream
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+
+                if (!text.contains("#EXTM3U", ignoreCase = true)) {
+                    throw IllegalStateException("Buccu bukan playlist M3U")
+                }
+
+                val extras = parsePlaylist(
+                    text,
+                    conn.url.toString()
+                )
+                if (extras.isEmpty()) {
+                    throw IllegalStateException("Buccu tidak berisi channel valid")
+                }
+
+                runOnUiThread {
+                    buccuPlaylistSyncInProgress = false
+
+                    if (targetPlaylistSyncStopped || isFinishing || isDestroyed ||
+                        loadedPlaylistUrl != fixedPlaylistUrl ||
+                        playlistChannels.isEmpty()
+                    ) return@runOnUiThread
+
+                    val oldChannels = playlistChannels
+                    val freshEntries = mergeBuccuEntries(oldChannels, extras)
+
+                    if (freshEntries == oldChannels) return@runOnUiThread
+
+                    val activeBefore = oldChannels.firstOrNull {
+                        it.url == activeChannelCardUrl
+                    }
+                    val activeFresh = activeBefore?.let { old ->
+                        freshEntries.firstOrNull {
+                            it.name.equals(old.name, ignoreCase = true)
+                        }
+                    }
+                    val selectedName = oldChannels.getOrNull(
+                        channelSpinner.selectedItemPosition
+                    )?.name
+
+                    // Simpan kad yang benar-benar sedang mendapat fokus remote.
+                    var focusedCardName: String? = null
+                    var focusNode: View? = currentFocus
+                    while (focusNode != null && focusedCardName == null) {
+                        val focusedUrl = channelCardViews.entries.firstOrNull { (_, cards) ->
+                            cards.any { it === focusNode }
+                        }?.key
+                        focusedCardName = focusedUrl?.let { url ->
+                            oldChannels.firstOrNull { it.url == url }?.name
+                        }
+                        focusNode = focusNode.parent as? View
+                    }
+
+                    // Perbarui identitas kartu, bukan pemutar yang sedang berjalan.
+                    if (activeBefore != null && activeFresh != null) {
+                        activeChannelCardUrl = activeFresh.url
+                        if (activePlaybackChannelCardUrl == activeBefore.url) {
+                            activePlaybackChannelCardUrl = activeFresh.url
+                        }
+                    }
+
+                    // Memperbarui daftar tanpa memanggil playStream().
+                    playlistChannels = freshEntries
+                    renderChannelGrid(freshEntries)
+
+                    // Pulihkan fokus pada channel yang sama selepas render.
+                    focusedCardName?.let { name ->
+                        channelGrid.post {
+                            val restored = freshEntries.firstOrNull {
+                                it.name.equals(name, ignoreCase = true)
+                            }?.let { entry ->
+                                channelCardViews[entry.url]?.firstOrNull()
+                            }
+                            restored?.requestFocus()
+                        }
+                    }
+
+                    channelSpinner.adapter = ArrayAdapter(
+                        this,
+                        android.R.layout.simple_spinner_dropdown_item,
+                        freshEntries.map { it.name }
+                    )
+
+                    val restoreName = activeBefore?.name ?: selectedName
+                    val restoreIndex = freshEntries.indexOfFirst {
+                        it.name.equals(restoreName, ignoreCase = true)
+                    }.takeIf { it >= 0 } ?: 0
+
+                    channelSpinner.setSelection(restoreIndex)
+                }
+            } catch (_: Exception) {
+                // Jika Buccu gagal, daftar channel terakhir tetap dipakai.
+                runOnUiThread {
+                    buccuPlaylistSyncInProgress = false
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
     }
 
     private fun syncTargetChannelsFromFixedPlaylist() {
@@ -5728,21 +5898,58 @@ class MainActivity : Activity() {
             }
 
             val extras = parsePlaylist(text, connection.url.toString())
-            val merged = entries.toMutableList()
-
-            for (extra in extras) {
-                val duplicate = merged.any {
-                    it.name.equals(extra.name, ignoreCase = true) ||
-                        it.url.equals(extra.url, ignoreCase = true)
-                }
-                if (!duplicate) merged.add(extra)
-            }
-            merged
+            mergeBuccuEntries(entries, extras)
         } catch (_: Exception) {
             entries
         } finally {
             connection?.disconnect()
         }
+    }
+
+    private fun buccuChannelKey(name: String): String {
+        val normalized = name.trim().uppercase()
+        val match = Regex(
+            """^(SCTV|INDOSIAR|ANTV)\s+[12](\s+ALTERNATIF)$"""
+        ).matchEntire(normalized)
+
+        return if (match != null) {
+            match.groupValues[1] + match.groupValues[2]
+        } else {
+            normalized
+        }
+    }
+
+    private fun mergeBuccuEntries(
+        entries: List<PlaylistEntry>,
+        extras: List<PlaylistEntry>
+    ): List<PlaylistEntry> {
+        val merged = entries.toMutableList()
+
+        for (extra in extras) {
+            val key = buccuChannelKey(extra.name)
+            val matchIndex = merged.indexOfFirst {
+                buccuChannelKey(it.name) == key
+            }
+
+            if (matchIndex >= 0) {
+                val old = merged[matchIndex]
+                // Gunakan URL dan header Buccu, tetapi pertahankan nama
+                // serta logo lama bila metadata Buccu tidak menyediakannya.
+                merged[matchIndex] = extra.copy(
+                    name = old.name,
+                    groupTitle = extra.groupTitle ?: old.groupTitle,
+                    logoUrl = extra.logoUrl ?: old.logoUrl,
+                    tvgId = extra.tvgId ?: old.tvgId
+                )
+            } else {
+                val duplicateUrl = merged.any {
+                    it.url.equals(extra.url, ignoreCase = true)
+                }
+                if (!duplicateUrl) merged.add(extra)
+            }
+        }
+
+        return merged
     }
 
     // Channel alternatif Indonesia. Channel utama dari playlist tetap dipertahankan.
@@ -6937,6 +7144,10 @@ class MainActivity : Activity() {
             targetPlaylistSyncHandler.removeCallbacks(it)
         }
         targetPlaylistSyncRunnable = null
+        buccuPlaylistSyncRunnable?.let {
+            buccuPlaylistSyncHandler.removeCallbacks(it)
+        }
+        buccuPlaylistSyncRunnable = null
 
         splashTimeoutRunnable?.let {
             window.decorView.removeCallbacks(it)
