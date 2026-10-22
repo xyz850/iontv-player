@@ -5486,7 +5486,9 @@ class MainActivity : Activity() {
                     }
 
                 // Tambahkan channel uji tanpa metadata DRM; channel asli tetap dipertahankan.
-                val channels = withSctvTestChannel(parsedChannels)
+                val channels = withBuccuPlaylist(
+                    withSctvTestChannel(parsedChannels)
+                )
 
                 runOnUiThread {
                     dismissSplash()
@@ -5627,17 +5629,19 @@ class MainActivity : Activity() {
                     throw IllegalStateException("Respons bukan playlist M3U yang valid")
                 }
 
-                val freshEntries = withSctvTestChannel(
-                    parsePlaylist(
-                        text,
-                        connection.url.toString()
-                    ).filterNot {
+                val freshEntries = withBuccuPlaylist(
+                    withSctvTestChannel(
+                        parsePlaylist(
+                            text,
+                            connection.url.toString()
+                        ).filterNot {
                         val name = it.name.trim()
                         name.equals("001 TRAKTIR KOPI", true) ||
                             name.equals("01 TRAKTIR KOPI", true) ||
                             name.equals("TRAKTIR KOPI", true) ||
                             name.equals("TES", true)
                     }
+                    )
                 )
 
                 if (freshEntries.isEmpty()) {
@@ -5695,6 +5699,50 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
         }.start()
+    }
+
+    // Playlist tambahan bersifat opsional; kegagalannya tidak membatalkan playlist utama.
+    private fun withBuccuPlaylist(
+        entries: List<PlaylistEntry>
+    ): List<PlaylistEntry> {
+        var connection: java.net.HttpURLConnection? = null
+        return try {
+            connection = (java.net.URL(
+                "https://xyz850.github.io/dev/buccu.m3u"
+            ).openConnection() as java.net.HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 5_000
+                readTimeout = 5_000
+                requestMethod = "GET"
+                setRequestProperty("Accept", "*/*")
+            }
+
+            if (connection.responseCode !in 200..299) return entries
+
+            val text = connection.inputStream
+                .bufferedReader(Charsets.UTF_8)
+                .use { it.readText() }
+
+            if (!text.contains("#EXTM3U", ignoreCase = true)) {
+                return entries
+            }
+
+            val extras = parsePlaylist(text, connection.url.toString())
+            val merged = entries.toMutableList()
+
+            for (extra in extras) {
+                val duplicate = merged.any {
+                    it.name.equals(extra.name, ignoreCase = true) ||
+                        it.url.equals(extra.url, ignoreCase = true)
+                }
+                if (!duplicate) merged.add(extra)
+            }
+            merged
+        } catch (_: Exception) {
+            entries
+        } finally {
+            connection?.disconnect()
+        }
     }
 
     // Channel alternatif Indonesia. Channel utama dari playlist tetap dipertahankan.
