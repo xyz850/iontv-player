@@ -697,6 +697,7 @@ class MainActivity : Activity() {
         }
         yesButton.setOnClickListener {
             dialog.dismiss()
+            releasePlayer()
             finish()
         }
 
@@ -6851,7 +6852,7 @@ class MainActivity : Activity() {
         if (fullscreen) {
             toggleFullscreen()
         } else {
-            super.onBackPressed()
+            showCyberExitDialog()
         }
     }
 
