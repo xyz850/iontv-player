@@ -6654,6 +6654,20 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun orderedVisibleChannelCards(): List<LinearLayout> {
+        if (!::channelGrid.isInitialized) return emptyList()
+
+        val registeredCards = channelCardViews.values.flatten().toHashSet()
+
+        return (0 until channelGrid.childCount)
+            .mapNotNull { channelGrid.getChildAt(it) as? LinearLayout }
+            .filter {
+                it in registeredCards &&
+                    it.isShown &&
+                    it.isFocusable
+            }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         // Navigasi D-pad khusus untuk daftar channel TV.
         if (event.action == KeyEvent.ACTION_DOWN) {
@@ -6666,10 +6680,7 @@ class MainActivity : Activity() {
             }
 
             if (direction != 0) {
-                val cards = channelCardViews.values
-                    .flatten()
-                    .distinct()
-                    .filter { it.isShown && it.isFocusable }
+                val cards = orderedVisibleChannelCards()
 
                 if (cards.isNotEmpty()) {
                     var node: View? = currentFocus
@@ -6732,10 +6743,7 @@ class MainActivity : Activity() {
             var focusedCard: LinearLayout? = null
             var focusInVideo = false
 
-            val cards = channelCardViews.values
-                .flatten()
-                .distinct()
-                .filter { it.isShown && it.isFocusable }
+            val cards = orderedVisibleChannelCards()
 
             while (node != null) {
                 val matchingCard = cards.firstOrNull { it === node }
