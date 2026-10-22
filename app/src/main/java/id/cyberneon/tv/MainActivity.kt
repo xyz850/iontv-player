@@ -6855,6 +6855,15 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onStop() {
+        // Hentikan pemutaran saat aplikasi meninggalkan layar.
+        // PiP dikecualikan agar pemutaran PiP tetap berfungsi.
+        if (!isInPictureInPictureMode) {
+            releasePlayer()
+        }
+        super.onStop()
+    }
+
     override fun onDestroy() {
         targetPlaylistSyncStopped = true
         targetPlaylistSyncRunnable?.let {
