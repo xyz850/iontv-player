@@ -6669,6 +6669,19 @@ class MainActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Tombol 0 pada remote membuka atau menutup fullscreen.
+        if (
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount == 0 &&
+            (
+                event.keyCode == KeyEvent.KEYCODE_0 ||
+                event.keyCode == KeyEvent.KEYCODE_NUMPAD_0
+            )
+        ) {
+            toggleFullscreen()
+            return true
+        }
+
         // Navigasi D-pad khusus untuk daftar channel TV.
         if (event.action == KeyEvent.ACTION_DOWN) {
             val direction = when (event.keyCode) {
