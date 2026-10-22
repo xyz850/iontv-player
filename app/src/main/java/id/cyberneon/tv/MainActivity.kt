@@ -5492,9 +5492,7 @@ class MainActivity : Activity() {
                     }
 
                 // Tambahkan channel uji tanpa metadata DRM; channel asli tetap dipertahankan.
-                val channels = withBuccuPlaylist(
-                    withSctvTestChannel(parsedChannels)
-                )
+                val channels = withBuccuPlaylist(parsedChannels)
 
                 runOnUiThread {
                     dismissSplash()
@@ -5800,18 +5798,13 @@ class MainActivity : Activity() {
                 }
 
                 val freshEntries = withBuccuPlaylist(
-                    withSctvTestChannel(
-                        parsePlaylist(
-                            text,
-                            connection.url.toString()
-                        ).filterNot {
+                    parsePlaylist(text, connection.url.toString()).filterNot {
                         val name = it.name.trim()
                         name.equals("001 TRAKTIR KOPI", true) ||
                             name.equals("01 TRAKTIR KOPI", true) ||
                             name.equals("TRAKTIR KOPI", true) ||
                             name.equals("TES", true)
                     }
-                    )
                 )
 
                 if (freshEntries.isEmpty()) {
@@ -5871,180 +5864,75 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    // Playlist tambahan bersifat opsional; kegagalannya tidak membatalkan playlist utama.
+    // Buccu adalah playlist utama. KPL203 hanya menjadi pelengkap.
+    private fun isExcludedKplChannel(entry: PlaylistEntry): Boolean {
+        val name = entry.name.trim().uppercase()
+        val group = entry.groupTitle.orEmpty()
+        return name.startsWith("SCTV") ||
+            name.startsWith("INDOSIAR") ||
+            name.startsWith("ANTV") ||
+            name.contains("ALTERNATIF") ||
+            name.contains(" - TES") ||
+            name == "TES" ||
+            group.contains("ALTERNATIF", ignoreCase = true)
+    }
+
     private fun withBuccuPlaylist(
         entries: List<PlaylistEntry>
     ): List<PlaylistEntry> {
+        val supplements = entries.filterNot { isExcludedKplChannel(it) }
         var connection: java.net.HttpURLConnection? = null
+
         return try {
-            connection = (java.net.URL(
+            val conn = (java.net.URL(
                 "https://xyz850.github.io/dev/buccu.m3u"
             ).openConnection() as java.net.HttpURLConnection).apply {
                 instanceFollowRedirects = true
-                connectTimeout = 5_000
-                readTimeout = 5_000
+                connectTimeout = 5000
+                readTimeout = 10000
                 requestMethod = "GET"
                 setRequestProperty("Accept", "*/*")
             }
+            connection = conn
 
-            if (connection.responseCode !in 200..299) return entries
+            if (conn.responseCode !in 200..299) return supplements
 
-            val text = connection.inputStream
-                .bufferedReader(Charsets.UTF_8)
+            val text = conn.inputStream.bufferedReader(Charsets.UTF_8)
                 .use { it.readText() }
 
             if (!text.contains("#EXTM3U", ignoreCase = true)) {
-                return entries
+                return supplements
             }
 
-            val extras = parsePlaylist(text, connection.url.toString())
-            mergeBuccuEntries(entries, extras)
+            val buccu = parsePlaylist(text, conn.url.toString())
+            if (buccu.isEmpty()) return supplements
+
+            mergeBuccuEntries(supplements, buccu)
         } catch (_: Exception) {
-            entries
+            // Jika Buccu gagal, pertahankan playlist cadangan yang sudah difilter.
+            supplements
         } finally {
             connection?.disconnect()
         }
     }
 
-    private fun buccuChannelKey(name: String): String {
-        val normalized = name.trim().uppercase()
-        val match = Regex(
-            """^(SCTV|INDOSIAR|ANTV)\s+[12](\s+ALTERNATIF)$"""
-        ).matchEntire(normalized)
-
-        return if (match != null) {
-            match.groupValues[1] + match.groupValues[2]
-        } else {
-            normalized
-        }
-    }
-
+    // Semua entri Buccu diprioritaskan dan tidak difilter berdasarkan nama.
     private fun mergeBuccuEntries(
         entries: List<PlaylistEntry>,
         extras: List<PlaylistEntry>
     ): List<PlaylistEntry> {
-        val merged = entries.toMutableList()
+        val merged = extras.toMutableList()
 
-        for (extra in extras) {
-            val key = buccuChannelKey(extra.name)
-            val matchIndex = merged.indexOfFirst {
-                buccuChannelKey(it.name) == key
-            }
+        for (entry in entries) {
+            if (isExcludedKplChannel(entry)) continue
 
-            if (matchIndex >= 0) {
-                val old = merged[matchIndex]
-                // Gunakan URL dan header Buccu, tetapi pertahankan nama
-                // serta logo lama bila metadata Buccu tidak menyediakannya.
-                merged[matchIndex] = extra.copy(
-                    name = old.name,
-                    groupTitle = extra.groupTitle ?: old.groupTitle,
-                    logoUrl = extra.logoUrl ?: old.logoUrl,
-                    tvgId = extra.tvgId ?: old.tvgId
-                )
-            } else {
-                val duplicateUrl = merged.any {
-                    it.url.equals(extra.url, ignoreCase = true)
-                }
-                if (!duplicateUrl) merged.add(extra)
+            val duplicate = merged.any {
+                it.url.equals(entry.url, ignoreCase = true) ||
+                    it.name.equals(entry.name, ignoreCase = true)
             }
+            if (!duplicate) merged.add(entry)
         }
-
         return merged
-    }
-
-    // Channel alternatif Indonesia. Channel utama dari playlist tetap dipertahankan.
-    private fun withSctvTestChannel(
-        entries: List<PlaylistEntry>
-    ): List<PlaylistEntry> {
-        val sctvUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=204&type=dash"
-        val beetvUrl = "https://beetv.my.id/xstreamx/vd.m3u8?ch=sctv"
-        val indosiarUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=205&type=dash"
-        val antvUrl = "https://nextgenz.my.id/event/pidio/play.mpd?id=782&type=dash"
-        val transTvUrl = "https://video.detik.com/transtv-sec/smil:transtv.smil/playlist.m3u8?wowzatokenstarttime=0&wowzatokenendtime=1786477084743&wowzatokenhash=67bQO-FmZtY5VJrBbFGFcV8AMTJ3jqBjhY79i0nA_dU%3D"
-        val trans7Url = "https://video.detik.com/trans7-sec/smil:trans7.smil/playlist.m3u8?wowzatokenstarttime=0&wowzatokenendtime=1786478234906&wowzatokenhash=mROhvnOElOh8J9-s6mmxi52TJWiGXGgxaQxvYQ-WUdg%3D"
-
-        val vidioHeaders = mapOf(
-            "User-Agent" to "VidioPlayer/6.31.6",
-            "Referer" to "http://www.vidio.com/",
-            "Origin" to "http://www.vidio.com"
-        )
-
-        val transTvHeaders = mapOf(
-            "Referer" to "https://20.detik.com/",
-            "Origin" to "https://20.detik.com",
-            "Cookie" to "cshx=3bcdb206",
-            "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
-        )
-
-        val alternativeNames = setOf(
-            "SCTV 2 - TES",
-            "SCTV ALTERNATIF",
-            "SCTV 2 ALTERNATIF",
-            "INDOSIAR ALTERNATIF",
-            "INDOSIAR 2 ALTERNATIF",
-            "ANTV ALTERNATIF",
-            "ANTV 1 ALTERNATIF",
-            "TRANS TV ALTERNATIF",
-            "TRANS7 ALTERNATIF"
-        )
-
-        val channels = entries.filterNot { entry ->
-            alternativeNames.any { it.equals(entry.name.trim(), ignoreCase = true) }
-        }.toMutableList()
-
-        channels.add(
-            PlaylistEntry(
-                name = "SCTV 2 ALTERNATIF",
-                url = sctvUrl,
-                groupTitle = "ALTERNATIF",
-                logoUrl = "https://www.mncvision.id/userfiles/image/channel/sctv.png",
-                headers = vidioHeaders,
-                alternateUrls = listOf(beetvUrl),
-                alternateHeaders = mapOf(beetvUrl to emptyMap())
-            )
-        )
-
-        channels.add(
-            PlaylistEntry(
-                name = "INDOSIAR 2 ALTERNATIF",
-                url = indosiarUrl,
-                groupTitle = "ALTERNATIF",
-                logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/INDOSIAR_Logo.png/1280px-INDOSIAR_Logo.png",
-                headers = vidioHeaders
-            )
-        )
-
-        channels.add(
-            PlaylistEntry(
-                name = "ANTV 1 ALTERNATIF",
-                url = antvUrl,
-                groupTitle = "ALTERNATIF",
-                logoUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRt-8ZOCCFoPNA9ms_SLoPbTfiivrl_7xyCxg&s",
-                headers = vidioHeaders
-            )
-        )
-
-        channels.add(
-            PlaylistEntry(
-                name = "TRANS TV ALTERNATIF",
-                url = transTvUrl,
-                groupTitle = "ALTERNATIF",
-                logoUrl = "https://upload.wikimedia.org/wikipedia/commons/c/c2/Logo_Trans_TV.png",
-                headers = transTvHeaders
-            )
-        )
-
-        channels.add(
-            PlaylistEntry(
-                name = "TRANS7 ALTERNATIF",
-                url = trans7Url,
-                groupTitle = "ALTERNATIF",
-                logoUrl = "https://upload.wikimedia.org/wikipedia/id/5/5f/Trans7_2013.svg",
-                headers = transTvHeaders
-            )
-        )
-
-        return channels
     }
 
     private fun parsePlaylist(
