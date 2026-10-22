@@ -276,7 +276,7 @@ class MainActivity : Activity() {
     private var targetPlaylistSyncRunnable: Runnable? = null
     private var targetPlaylistSyncInProgress = false
     private var targetPlaylistSyncStopped = false
-    private val targetPlaylistSyncIntervalMs = 5 * 60 * 1000L
+    private val targetPlaylistSyncIntervalMs = 30 * 60 * 1000L
 
     private var urlScanInProgress = false
     private var urlMonitorRunnable: Runnable? = null
@@ -2577,6 +2577,12 @@ class MainActivity : Activity() {
                 )
             )
         }
+
+        // Sembunyikan panduan remote otomatis setelah 5 detik.
+        // Berlaku untuk mode potret dan lanskap.
+        remoteGuidePanel.postDelayed({
+            remoteGuidePanel.visibility = View.GONE
+        }, 5_000L)
 
         root.addView(
             mainContent,
