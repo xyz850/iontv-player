@@ -3570,7 +3570,7 @@ class MainActivity : Activity() {
             .toList()
             .sortedBy { countryGroupOrder(it.first) }
 
-        groups.forEach { (country, entries) ->
+        groups.forEachIndexed { folderIndex, (country, entries) ->
             val selected = country !in collapsedCountryGroups
 
             val chip = LinearLayout(this).apply {
@@ -3633,6 +3633,33 @@ class MainActivity : Activity() {
                 collapsedCountryGroups.remove(country)
                 renderChannelGrid(playlistChannels)
                 scanCountryFolderUrls(country)
+            }
+
+            // Navigasi folder mengikuti urutan negara, bukan tebakan posisi Android.
+            chip.setOnKeyListener { _, keyCode, event ->
+                if (event.action != KeyEvent.ACTION_DOWN) {
+                    return@setOnKeyListener false
+                }
+                val targetIndex = when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> folderIndex - 1
+                    KeyEvent.KEYCODE_DPAD_DOWN -> folderIndex + 1
+                    else -> return@setOnKeyListener false
+                }
+
+                // Satu penekanan vertikal hanya memindahkan satu folder.
+                if (event.repeatCount > 0) {
+                    return@setOnKeyListener true
+                }
+
+                if (targetIndex !in 0 until strip.childCount) {
+                    // Tahan fokus di ujung daftar.
+                    true
+                } else {
+                    val target = strip.getChildAt(targetIndex)
+                    target.requestFocus()
+                    bottomCountryFolderScroll?.smoothScrollTo(0, target.top)
+                    true
+                }
             }
 
             strip.addView(
