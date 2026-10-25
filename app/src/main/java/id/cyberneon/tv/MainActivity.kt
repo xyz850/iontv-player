@@ -258,6 +258,8 @@ class MainActivity : Activity() {
     private var activePlaybackAlternateHeaders: Map<String, Map<String, String>> = emptyMap()
     private var activePlaybackChannelCardUrl: String? = null
     private var activeLaguBugisUrls: List<String> = emptyList()
+    private val laguBugisRefreshHandler = Handler(Looper.getMainLooper())
+    private var laguBugisRefreshRunnable: Runnable? = null
     private var lastAutoVideoRecoveryAtMs = 0L
 
     // Bingkai RGB hanya berjalan pada kartu channel yang sedang diputar.
@@ -5399,6 +5401,124 @@ class MainActivity : Activity() {
     }
 
 
+
+    private fun startLaguBugisAutoRefresh(
+        exo: androidx.media3.exoplayer.ExoPlayer,
+        channelUrl: String
+    ) {
+        laguBugisRefreshRunnable?.let {
+            laguBugisRefreshHandler.removeCallbacks(it)
+        }
+
+        val baseUrl = "https://allowance-cult-inspired-sleeve.trycloudflare.com"
+        lateinit var task: Runnable
+
+        task = object : Runnable {
+            override fun run() {
+                if (player !== exo || isFinishing || isDestroyed ||
+                    activePlaybackChannelCardUrl != channelUrl ||
+                    activeLaguBugisUrls.isEmpty()
+                ) return
+
+                Thread {
+                    var connection: java.net.HttpURLConnection? = null
+                    var refreshedUrls = emptyList<String>()
+
+                    try {
+                        connection = (
+                            java.net.URL("$baseUrl/api/videos").openConnection()
+                                as java.net.HttpURLConnection
+                        ).apply {
+                            connectTimeout = 10000
+                            readTimeout = 15000
+                            requestMethod = "GET"
+                            setRequestProperty("Accept", "application/json")
+                            setRequestProperty("Cache-Control", "no-cache")
+                        }
+
+                        val code = connection.responseCode
+                        if (code !in 200..299) {
+                            throw IllegalStateException("HTTP $code")
+                        }
+
+                        val body = connection.inputStream.bufferedReader(
+                            Charsets.UTF_8
+                        ).use { it.readText() }
+
+                        val names = org.json.JSONArray(body)
+                        refreshedUrls = (0 until names.length())
+                            .map { names.getString(it) }
+                            .filter {
+                                it.endsWith(".mp4", ignoreCase = true) &&
+                                    it.isNotBlank() &&
+                                    java.io.File(it).name == it
+                            }
+                            .map { name ->
+                                Uri.parse(baseUrl).buildUpon()
+                                    .appendPath("video")
+                                    .appendPath(name)
+                                    .build()
+                                    .toString()
+                            }
+                            .distinct()
+                    } catch (e: Exception) {
+                        android.util.Log.w(
+                            "IONTVPlayer",
+                            "Refresh LAGU BUGIS gagal; antrean lama dipertahankan",
+                            e
+                        )
+                    } finally {
+                        connection?.disconnect()
+                    }
+
+                    runOnUiThread {
+                        if (player !== exo || isFinishing || isDestroyed ||
+                            activePlaybackChannelCardUrl != channelUrl ||
+                            laguBugisRefreshRunnable !== task
+                        ) return@runOnUiThread
+
+                        if (refreshedUrls.isNotEmpty()) {
+                            val queuedUrls = (0 until exo.mediaItemCount)
+                                .mapNotNull { index ->
+                                    exo.getMediaItem(index)
+                                        .localConfiguration?.uri?.toString()
+                                }
+                                .toSet()
+
+                            val newUrls = refreshedUrls.filterNot {
+                                it in queuedUrls
+                            }
+
+                            if (newUrls.isNotEmpty()) {
+                                exo.addMediaItems(
+                                    exo.mediaItemCount,
+                                    newUrls.map {
+                                        androidx.media3.common.MediaItem.fromUri(it)
+                                    }
+                                )
+
+                                // Pertahankan semua URL lama; tambah URL baharu sahaja.
+                                activeLaguBugisUrls =
+                                    (activeLaguBugisUrls + newUrls).distinct()
+
+                                android.util.Log.i(
+                                    "IONTVPlayer",
+                                    "${newUrls.size} video LAGU BUGIS baharu ditambahkan"
+                                )
+                            }
+                        }
+
+                        // Terus mencuba semula setiap 60 saat, termasuk selepas kegagalan API.
+                        laguBugisRefreshHandler.postDelayed(task, 60_000L)
+                    }
+                }.start()
+            }
+        }
+
+        laguBugisRefreshRunnable = task
+        laguBugisRefreshHandler.postDelayed(task, 60_000L)
+    }
+
     private fun playLaguBugisPlaylist(channelUrl: String) {
         val baseUrl = "https://allowance-cult-inspired-sleeve.trycloudflare.com"
         status.text = "Memuat senarai lagu Bugis…"
@@ -6819,6 +6939,14 @@ class MainActivity : Activity() {
                     liveIndicatorHideAt = android.os.SystemClock.elapsedRealtime() + 5000L
                     controlsHandler.post(liveIndicatorRunnable)
                     exo.playWhenReady = true
+                    if (mediaPlaylistUrls.any {
+                            it.startsWith(
+                                "https://allowance-cult-inspired-sleeve.trycloudflare.com/video/"
+                            )
+                        }
+                    ) {
+                        startLaguBugisAutoRefresh(exo, channelCardUrl)
+                    }
                 }
         } catch (e: Exception) {
             status.text = "Kesalahan: ${e.message ?: "tidak diketahui"}"
@@ -6918,6 +7046,10 @@ class MainActivity : Activity() {
     }
 
     private fun releasePlayer() {
+        laguBugisRefreshRunnable?.let {
+            laguBugisRefreshHandler.removeCallbacks(it)
+        }
+        laguBugisRefreshRunnable = null
         controlsHandler.removeCallbacks(liveIndicatorRunnable)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (::playerView.isInitialized) playerView.player = null
