@@ -5480,7 +5480,7 @@ class MainActivity : Activity() {
                         if (refreshedUrls.isNotEmpty()) {
                             val queuedUrls = (0 until exo.mediaItemCount)
                                 .mapNotNull { index ->
-                                    exo.getMediaItem(index)
+                                    exo.getMediaItemAt(index)
                                         .localConfiguration?.uri?.toString()
                                 }
                                 .toSet()
