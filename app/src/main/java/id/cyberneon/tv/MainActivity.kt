@@ -6733,6 +6733,7 @@ class MainActivity : Activity() {
                         val safeIndex = startMediaItemIndex.coerceIn(
                             0, mediaPlaylistUrls.lastIndex
                         )
+                        exo.shuffleModeEnabled = true
                         exo.repeatMode = Player.REPEAT_MODE_ALL
                         exo.setMediaItems(
                             mediaPlaylistUrls.map { MediaItem.fromUri(it) },
@@ -6740,6 +6741,7 @@ class MainActivity : Activity() {
                             C.TIME_UNSET
                         )
                     } else {
+                        exo.shuffleModeEnabled = false
                         exo.setMediaItem(itemBuilder.build())
                     }
                     exo.addListener(object : Player.Listener {
