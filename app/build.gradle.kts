@@ -16,8 +16,8 @@ android {
         applicationId = "id.cyberneon.tv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.6 Beta"
+        versionCode = 8
+        versionName = "1.6"
     }
     signingConfigs {
         create("stable") {
