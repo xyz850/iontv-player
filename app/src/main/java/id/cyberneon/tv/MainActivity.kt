@@ -257,6 +257,7 @@ class MainActivity : Activity() {
     private var activePlaybackAlternateUrls: List<String> = emptyList()
     private var activePlaybackAlternateHeaders: Map<String, Map<String, String>> = emptyMap()
     private var activePlaybackChannelCardUrl: String? = null
+    private var activeLaguBugisUrls: List<String> = emptyList()
     private var lastAutoVideoRecoveryAtMs = 0L
 
     // Bingkai RGB hanya berjalan pada kartu channel yang sedang diputar.
@@ -5362,6 +5363,10 @@ class MainActivity : Activity() {
                 status.text = "Pilih channel terlebih dahulu."
                 return
             }
+            if (selected.name.equals("LAGU BUGIS", ignoreCase = true)) {
+                playLaguBugisPlaylist(selected.url)
+                return
+            }
             // Header global menjadi nilai awal.
             // Metadata header channel mengesampingkan nilai global.
             val effectiveHeaders = headers.toMutableMap()
@@ -5391,6 +5396,78 @@ class MainActivity : Activity() {
             looksLikePlaylist -> loadPlaylist(url, headers)
             else -> detectPlaylistOrPlayMedia(url, headers)
         }
+    }
+
+
+    private fun playLaguBugisPlaylist(channelUrl: String) {
+        val baseUrl = "https://allowance-cult-inspired-sleeve.trycloudflare.com"
+        status.text = "Memuat senarai lagu Bugis…"
+
+        Thread {
+            var connection: java.net.HttpURLConnection? = null
+            try {
+                connection = (java.net.URL("$baseUrl/api/videos").openConnection()
+                    as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 15000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache")
+                }
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    throw IllegalStateException("HTTP $code")
+                }
+
+                val body = connection.inputStream.bufferedReader(
+                    Charsets.UTF_8
+                ).use { it.readText() }
+
+                val names = org.json.JSONArray(body)
+                val urls = (0 until names.length())
+                    .map { names.getString(it) }
+                    .filter {
+                        it.endsWith(".mp4", ignoreCase = true) &&
+                            it.isNotBlank() &&
+                            java.io.File(it).name == it
+                    }
+                    .map { name ->
+                        Uri.parse(baseUrl).buildUpon()
+                            .appendPath("video")
+                            .appendPath(name)
+                            .build()
+                            .toString()
+                    }
+
+                if (urls.isEmpty()) {
+                    throw IllegalStateException("Tiada fail MP4 dalam folder videos.")
+                }
+
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    status.text = "Memainkan ${urls.size} lagu Bugis…"
+                    playMedia(
+                        urls.first(),
+                        emptyMap(),
+                        channelCardUrl = channelUrl,
+                        mediaPlaylistUrls = urls
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "IONTVPlayer", "Gagal memuat senarai LAGU BUGIS", e
+                )
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        status.text =
+                            "Senarai LAGU BUGIS gagal dimuat. Periksa server dan tunnel."
+                    }
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }.start()
     }
 
     private fun detectPlaylistOrPlayMedia(
@@ -6313,7 +6390,9 @@ class MainActivity : Activity() {
         alternateUrls: List<String> = emptyList(),
         alternateHeaders: Map<String, Map<String, String>> = emptyMap(),
         channelCardUrl: String = url,
-        isAutoRecovery: Boolean = false
+        isAutoRecovery: Boolean = false,
+        mediaPlaylistUrls: List<String> = emptyList(),
+        startMediaItemIndex: Int = 0
     ) {
         releasePlayer()
 
@@ -6326,6 +6405,7 @@ class MainActivity : Activity() {
         activePlaybackAlternateUrls = alternateUrls
         activePlaybackAlternateHeaders = alternateHeaders
         activePlaybackChannelCardUrl = channelCardUrl
+        activeLaguBugisUrls = mediaPlaylistUrls
 
         activeChannelCardUrl = channelCardUrl
         updateActiveChannelCardNeon()
@@ -6468,7 +6548,9 @@ class MainActivity : Activity() {
                                     alternateUrls,
                                     alternateHeaders,
                                     channelCardUrl,
-                                    true
+                                    true,
+                                    mediaPlaylistUrls,
+                                    exo.currentMediaItemIndex
                                 )
                                 return
                             }
@@ -6527,7 +6609,19 @@ class MainActivity : Activity() {
 
                     videoFrameRendered = false
                     showVideoLoading()
-                    exo.setMediaItem(itemBuilder.build())
+                    if (mediaPlaylistUrls.isNotEmpty()) {
+                        val safeIndex = startMediaItemIndex.coerceIn(
+                            0, mediaPlaylistUrls.lastIndex
+                        )
+                        exo.repeatMode = Player.REPEAT_MODE_ALL
+                        exo.setMediaItems(
+                            mediaPlaylistUrls.map { MediaItem.fromUri(it) },
+                            safeIndex,
+                            C.TIME_UNSET
+                        )
+                    } else {
+                        exo.setMediaItem(itemBuilder.build())
+                    }
                     exo.addListener(object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
                             if (isPlaying) {
@@ -6817,7 +6911,9 @@ class MainActivity : Activity() {
             activePlaybackDrmLicenseHeaders,
             activePlaybackAlternateUrls,
             activePlaybackAlternateHeaders,
-            activePlaybackChannelCardUrl ?: url
+            activePlaybackChannelCardUrl ?: url,
+            mediaPlaylistUrls = activeLaguBugisUrls,
+            startMediaItemIndex = player?.currentMediaItemIndex ?: 0
         )
     }
 
