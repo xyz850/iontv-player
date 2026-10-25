@@ -5895,22 +5895,22 @@ class MainActivity : Activity() {
             }
             connection = conn
 
-            if (conn.responseCode !in 200..299) return supplements
+            if (conn.responseCode !in 200..299) {
+                return mergeBuccuEntries(supplements, emptyList())
+            }
 
             val text = conn.inputStream.bufferedReader(Charsets.UTF_8)
                 .use { it.readText() }
 
             if (!text.contains("#EXTM3U", ignoreCase = true)) {
-                return supplements
+                return mergeBuccuEntries(supplements, emptyList())
             }
 
             val buccu = parsePlaylist(text, conn.url.toString())
-            if (buccu.isEmpty()) return supplements
-
             mergeBuccuEntries(supplements, buccu)
         } catch (_: Exception) {
-            // Jika Buccu gagal, pertahankan playlist cadangan yang sudah difilter.
-            supplements
+            // Kekalkan channel sedia ada dan channel tempatan jika rangkaian gagal.
+            mergeBuccuEntries(supplements, emptyList())
         } finally {
             connection?.disconnect()
         }
@@ -5932,6 +5932,27 @@ class MainActivity : Activity() {
             }
             if (!duplicate) merged.add(entry)
         }
+
+        // Channel ujian video tempatan; URL Quick Tunnel bersifat sementara.
+        val laguBugisUrl =
+            "https://allowance-cult-inspired-sleeve.trycloudflare.com/video/" +
+            "Fitri%20Adiba%20Bilqis%20-%20Itaneng%20Tenri%20Bolo%20_%20Lirik%20Lagu%20Bugis.mp4"
+
+        val laguBugisExists = merged.any {
+            it.url.equals(laguBugisUrl, ignoreCase = true) ||
+                it.name.equals("LAGU BUGIS", ignoreCase = true)
+        }
+
+        if (!laguBugisExists) {
+            merged.add(
+                PlaylistEntry(
+                    name = "LAGU BUGIS",
+                    url = laguBugisUrl,
+                    groupTitle = "Lainnya"
+                )
+            )
+        }
+
         return merged
     }
 
