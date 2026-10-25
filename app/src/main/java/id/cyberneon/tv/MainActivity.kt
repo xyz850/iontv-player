@@ -6730,13 +6730,14 @@ class MainActivity : Activity() {
                     videoFrameRendered = false
                     showVideoLoading()
                     if (mediaPlaylistUrls.isNotEmpty()) {
+                        val shuffledUrls = mediaPlaylistUrls.shuffled()
                         val safeIndex = startMediaItemIndex.coerceIn(
-                            0, mediaPlaylistUrls.lastIndex
+                            0, shuffledUrls.lastIndex
                         )
-                        exo.shuffleModeEnabled = true
+                        exo.shuffleModeEnabled = false
                         exo.repeatMode = Player.REPEAT_MODE_ALL
                         exo.setMediaItems(
-                            mediaPlaylistUrls.map { MediaItem.fromUri(it) },
+                            shuffledUrls.map { MediaItem.fromUri(it) },
                             safeIndex,
                             C.TIME_UNSET
                         )
