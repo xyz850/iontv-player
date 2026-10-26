@@ -2825,7 +2825,7 @@ class MainActivity : Activity() {
                         android.content.Intent(
                             android.content.Intent.ACTION_VIEW,
                             android.net.Uri.parse(
-                                "https://cyber-neon-tv-site.parabola-satellite.workers.dev/"
+                                "https://zone-striking-subcommittee-accordance.trycloudflare.com"
                             )
                         )
                     )
@@ -5410,7 +5410,7 @@ class MainActivity : Activity() {
             laguBugisRefreshHandler.removeCallbacks(it)
         }
 
-        val baseUrl = "https://allowance-cult-inspired-sleeve.trycloudflare.com"
+        val baseUrl = "https://zone-striking-subcommittee-accordance.trycloudflare.com"
         lateinit var task: Runnable
 
         task = object : Runnable {
@@ -5520,7 +5520,7 @@ class MainActivity : Activity() {
     }
 
     private fun playLaguBugisPlaylist(channelUrl: String) {
-        val baseUrl = "https://allowance-cult-inspired-sleeve.trycloudflare.com"
+        val baseUrl = "https://zone-striking-subcommittee-accordance.trycloudflare.com"
         status.text = "Memuat senarai lagu Bugis…"
 
         Thread {
@@ -6132,7 +6132,7 @@ class MainActivity : Activity() {
 
         // Channel ujian video tempatan; URL Quick Tunnel bersifat sementara.
         val laguBugisUrl =
-            "https://allowance-cult-inspired-sleeve.trycloudflare.com/video/" +
+            "https://zone-striking-subcommittee-accordance.trycloudflare.com/video/" +
             "Fitri%20Adiba%20Bilqis%20-%20Itaneng%20Tenri%20Bolo%20_%20Lirik%20Lagu%20Bugis.mp4"
 
         val laguBugisExists = merged.any {
@@ -6944,7 +6944,7 @@ class MainActivity : Activity() {
                     exo.playWhenReady = true
                     if (mediaPlaylistUrls.any {
                             it.startsWith(
-                                "https://allowance-cult-inspired-sleeve.trycloudflare.com/video/"
+                                "https://zone-striking-subcommittee-accordance.trycloudflare.com/video/"
                             )
                         }
                     ) {
