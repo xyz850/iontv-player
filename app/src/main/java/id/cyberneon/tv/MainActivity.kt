@@ -158,6 +158,7 @@ private object FootballBadgeLoader {
 class MainActivity : Activity() {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
+    private lateinit var videoWatermarkView: android.widget.ImageView
     private lateinit var videoContainer: FrameLayout
     private lateinit var liveIndicator: LinearLayout
     private lateinit var liveIndicatorDot: View
@@ -1364,6 +1365,9 @@ class MainActivity : Activity() {
         // Pasang player setelah tampilan baru siap, lalu lanjutkan video.
         playerView.post {
             playerView.player = currentPlayer
+            if (::videoWatermarkView.isInitialized) {
+                videoWatermarkView.bringToFront()
+            }
 
             if (currentPlayer != null) {
                 currentPlayer.playWhenReady = shouldResume
@@ -1396,6 +1400,26 @@ class MainActivity : Activity() {
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
             )
+            videoWatermarkView = android.widget.ImageView(this@MainActivity).apply {
+                setImageResource(R.drawable.bugis_watermark)
+                contentDescription = "Watermark Cyber Neon TV"
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                alpha = 0.82f
+                isClickable = false
+                isFocusable = false
+                elevation = dp(8).toFloat()
+            }
+            playerView.overlayFrameLayout?.addView(
+                videoWatermarkView,
+                FrameLayout.LayoutParams(
+                    dp(64),
+                    dp(64),
+                    android.view.Gravity.TOP or android.view.Gravity.END
+                ).apply {
+                    topMargin = dp(12)
+                    marginEnd = dp(12)
+                }
+            ) ?: throw IllegalStateException("Overlay PlayerView tidak tersedia")
         }
 
 
